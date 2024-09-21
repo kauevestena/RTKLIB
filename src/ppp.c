@@ -72,6 +72,11 @@ static const char rcsid[]="$Id:$";
 #define IB(s,opt)   (NR(opt)+(s)-1)    /* state index of phase bias */
 #define NX(opt)     (IB(MAXSAT,opt)+1) /* number of estimated states */
 
+
+
+typedef double doublereal;
+
+
 /* function prototypes -------------------------------------------------------*/
 #ifdef IERS_MODEL
 extern int dehanttideinel_(double *xsta, int *year, int *mon, int *day,
@@ -847,10 +852,17 @@ static void satantpcv(const double *rs, const double *rr, const pcv_t *pcv,
     
     antmodel_s(pcv,nadir,dant);
 }
+
+
+
+
+
+
 /* precise tropospheric model ------------------------------------------------*/
 static double prectrop(gtime_t time, const double *pos, const double *azel,
                        const prcopt_t *opt, const double *x, double *dtdx,
                        double *var)
+/* ,const filopt_t *file_opts) */
 {
     const double zazel[]={0.0,PI/2.0};
     double zhd,m_h,m_w,cotz,grad_n,grad_e;
@@ -861,19 +873,180 @@ static double prectrop(gtime_t time, const double *pos, const double *azel,
     /* mapping function */
     m_h=tropmapf(time,pos,azel,&m_w);
     
+
+    
+
+
+/*     constants that python will deal to convert and find the stuff
+ */
+
+    double prectrop_pi = 3.1415926535897932384626433;
+
+    double conv_factor = 180.0/prectrop_pi;
+
+
+
+
+
+
+
+    /*
+        thx: https://smallbusiness.chron.com/read-first-line-file-c-programming-29321.html
+    */
+
+    FILE *infileStream; 
+    char fileText [200];
+    infileStream = fopen ("/home/lape04/Dropbox/laix2/processamentos_gnss_out21/curr_delaypath.txt", "r"); 
+    fgets(fileText, 200, infileStream); 
+    fclose(infileStream);
+
+    FILE *infileStream2; 
+    char stationame [200];
+    infileStream2 = fopen ("/home/lape04/Dropbox/laix2/processamentos_gnss_out21/curr_station_name.txt", "r"); 
+    fgets(stationame, 200, infileStream2); 
+    fclose(infileStream2);
+
+
+    FILE * fout_constants;
+    fout_constants = fopen("/home/lape04/Dropbox/laix2/processamentos_gnss_out21/curr_constants.txt","w+");
+    fprintf(fout_constants,"%s,%i",stationame,time.time);
+    fclose(fout_constants);
+
+/*     calling the python program
+ */
+
+    system("python3 /home/lape04/Dropbox/laix2/processamentos_gnss_out21/interpolator.py");
+
+
+/*     FILE *infileStream3; 
+    char frompython[200];
+    infileStream3 = fopen ("/home/lape04/Dropbox/laix2/processamentos_gnss_out21/curr_interps.txt", "r"); 
+    fgets(frompython, 200, infileStream3); 
+    fclose(infileStream3);
+
+    char ah_interp[100];
+    char aw_interp[100];
+    char jd_interp[100];
+
+    char *separator = strtok(frompython, ',');
+    strcpy(ah_interp,separator);
+    separator = strtok(NULL, ',');
+    strcpy(aw_interp,separator);
+    separator = strtok(NULL, ',');
+    strcpy(jd_interp,separator);
+    
+     */
+
+
+    FILE *infileStream3a; 
+    char ah_interp[200];
+    infileStream3a = fopen ("/home/lape04/Dropbox/laix2/processamentos_gnss_out21/curr_ah.txt", "r"); 
+    fgets(ah_interp, 200, infileStream3a); 
+    fclose(infileStream3a);
+
+    FILE *infileStream3b; 
+    char aw_interp[200];
+    infileStream3b = fopen ("/home/lape04/Dropbox/laix2/processamentos_gnss_out21/curr_aw.txt", "r"); 
+    fgets(aw_interp, 200, infileStream3b); 
+    fclose(infileStream3b);
+
+    FILE *infileStream3c; 
+    char jd_interp[200];
+    infileStream3c = fopen ("/home/lape04/Dropbox/laix2/processamentos_gnss_out21/curr_jd.txt", "r"); 
+    fgets(jd_interp, 200, infileStream3c); 
+    fclose(infileStream3c);
+
+/*     printf("%s,%s,%s\n",ah_interp,aw_interp,jd_interp); */
+
+    char *ah_nothing;
+    char *aw_nothing;
+    char *jd_nothing;
+
+
+    double ah_vmf,aw_vmf,jd_vmf;
+
+    ah_vmf = strtod(ah_interp, &ah_nothing);
+    aw_vmf = strtod(aw_interp, &aw_nothing);
+    jd_vmf = strtod(jd_interp, &jd_nothing);
+
+  /*   printf("%lf,%lf,%lf\n",ah_vmf,aw_vmf,jd_vmf); */
+
+
+
+    /* int vmf1_ht__(doublereal *ah, doublereal *aw, doublereal *
+	dmjd, doublereal *dlat, doublereal *ht, doublereal *zd, doublereal *
+	vmf1h, doublereal *vmf1w)
+    /*  Given: */
+    /*     AH             d      Hydrostatic coefficient a (Note 1) */
+    /*     AW             d      Wet coefficient a (Note 1) */
+    /*     DMJD           d      Modified Julian Date */
+    /*     DLAT           d      Latitude given in radians (North Latitude) */
+    /*     HT             d      Ellipsoidal height given in meters */
+    /*     ZD             d      Zenith distance in radians */
+
+    /*  Returned: */
+    /*     VMF1H          d      Hydrostatic mapping function (Note 2) */
+    /*     VMF1W          d      Wet mapping function (Note 2) */
+
+
+
+
+    double m_h_vmf,m_w_vmf;
+
+
+
+    double vmf_zd = (prectrop_pi/2) - azel[1];
+
+
+    int res = vmf1_ht__(&ah_vmf,&aw_vmf,&jd_vmf,&pos[0],&pos[2],&vmf_zd,&m_h_vmf,&m_w_vmf); 
+
+/*     printf("%i,%20.20f,%20.20f\n",res,m_h_vmf,m_w_vmf); */
+
     if ((opt->tropopt==TROPOPT_ESTG||opt->tropopt==TROPOPT_CORG)&&azel[1]>0.0) {
         
         /* m_w=m_0+m_0*cot(el)*(Gn*cos(az)+Ge*sin(az)): ref [6] */
         cotz=1.0/tan(azel[1]);
+
+
         grad_n=m_w*cotz*cos(azel[0]);
         grad_e=m_w*cotz*sin(azel[0]);
         m_w+=grad_n*x[1]+grad_e*x[2];
+
+
+        grad_n=m_w_vmf*cotz*cos(azel[0]);
+        grad_e=m_w_vmf*cotz*sin(azel[0]);
+        m_w_vmf+=grad_n*x[1]+grad_e*x[2];
+
+
         dtdx[1]=grad_n*(x[0]-zhd);
         dtdx[2]=grad_e*(x[0]-zhd);
     }
-    dtdx[0]=m_w;
+    dtdx[0]=m_w_vmf;
     *var=SQR(0.01);
-    return m_h*zhd+m_w*(x[0]-zhd);
+
+
+
+    FILE * fout;
+    fout = fopen(fileText,"a+");
+    /* fout = fopen(*fopt,"a+"); */
+
+    fprintf(fout,"Time: %i ZHD_incl: %f ZWD_incl: %f grad_e: %f grad_n: %f m_h_nmf: %f m_w_nmf: %f Atraso Inclinado: %f ZTD: %f mh_vmf: %f mw_vmf: %f dif_mh %f dif_mw %f\n",time.time,m_h*zhd, m_w*(x[0]-zhd),grad_e,grad_n,m_h,m_w,m_h*zhd+m_w*(x[0]-zhd),x[0],m_h_vmf,m_w_vmf,fabs(m_h)-fabs(m_h_vmf),fabs(m_w)-fabs(m_w_vmf));
+    fclose(fout);
+
+
+
+    /* FILE * fout;
+    fout = fopen("/home/lais/Downloads/RTKLIB-master/app/rnx2rtkp/outppp.txt","a+");
+    fprintf(fout,"ZHD_incl: %f ZWD_incl: %f grad_e: %f grad_n: %f m_w grad: %f Atraso Inclinado Grad: %f m_w: %f Atraso Inclinado: %f ZTD: %f \n", m_h*zhd, m_w*(x[0]-zhd),grad_e,grad_n,m_w+(grad_n*x[1]+grad_e*x[2]),m_h*zhd+(m_w+(grad_n*x[1]+grad_e*x[2]))*(x[0]-zhd),m_w,m_h*zhd+m_w*(x[0]-zhd),x[0]);
+    fclose(fout);*/
+
+/*  ORIGINAL: (NMF) */
+ /*   return m_h*zhd+m_w*(x[0]-zhd);
+ */
+
+/* MODIFIED: VMF */
+    return m_h_vmf*zhd+m_w_vmf*(x[0]-zhd);
+
 }
 /* phase and code residuals --------------------------------------------------*/
 static int res_ppp(int iter, const obsd_t *obs, int n, const double *rs,
@@ -882,6 +1055,9 @@ static int res_ppp(int iter, const obsd_t *obs, int n, const double *rs,
                    double *H, double *R, double *azel)
 {
     prcopt_t *opt=&rtk->opt;
+    /* 
+    filopt_t *fiilop=&
+    */
     double r,rr[3],disp[3],pos[3],e[3],meas[2],dtdx[3],dantr[NFREQ]={0};
     double dants[NFREQ]={0},var[MAXOBS*2],dtrp=0.0,vart=0.0,varm[2]={0};
     int i,j,k,sat,sys,nv=0,nx=rtk->nx,brk,tideopt;
@@ -925,7 +1101,7 @@ static int res_ppp(int iter, const obsd_t *obs, int n, const double *rs,
             dtrp=prectrop(obs[i].time,pos,azel+i*2,opt,x+IT(opt),dtdx,&vart);
         }
         else if (opt->tropopt==TROPOPT_COR||opt->tropopt==TROPOPT_CORG) {
-            dtrp=prectrop(obs[i].time,pos,azel+i*2,opt,x,dtdx,&vart);
+            dtrp=prectrop(obs[i].time,pos,azel+i*2,opt,x,dtdx,&vart);     
         }
         /* satellite antenna model */
         if (opt->posopt[0]) {
@@ -1004,6 +1180,11 @@ static int res_ppp(int iter, const obsd_t *obs, int n, const double *rs,
     trace(5,"v=\n"); tracemat(5,v, 1,nv,8,3);
     trace(5,"H=\n"); tracemat(5,H,nx,nv,8,3);
     trace(5,"R=\n"); tracemat(5,R,nv,nv,8,5);
+
+   /* FILE * fout;
+    fout = fopen("/home/lais/Downloads/RTKLIB-master/app/rnx2rtkp/outdtrpppp.txt","a+");
+    fprintf(fout,"dtrp: %f \n", dtrp);
+    fclose(fout);*/
     return nv;
 }
 /* number of estimated states ------------------------------------------------*/
@@ -1099,3 +1280,309 @@ extern void pppos(rtk_t *rtk, const obsd_t *obs, int n, const nav_t *nav)
     free(rs); free(dts); free(var); free(azel);
     free(xp); free(Pp); free(v); free(H); free(R);
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/* ../src/vmf1_ht.f -- translated by f2c (version 20090411).
+   You must link the resulting object file with libf2c:
+	on Microsoft Windows system, link with libf2c.lib;
+	on Linux or Unix systems, link with .../path/to/libf2c.a -lm
+	or, if you install libf2c.a in a standard place, with -lf2c -lm
+	-- in that order, at the end of the command line, as in
+		cc *.o -lf2c -lm
+	Source for libf2c is in /netlib/f2c/libf2c.zip, e.g.,
+
+		http://www.netlib.org/f2c/libf2c.zip
+*/
+/* 
+/* #include "f2c.h"
+ */
+
+/* Subroutine */ int vmf1_ht__(doublereal *ah, doublereal *aw, doublereal *
+	dmjd, doublereal *dlat, doublereal *ht, doublereal *zd, doublereal *
+	vmf1h, doublereal *vmf1w)
+{
+    /* Builtin functions */
+    double cos(doublereal), sin(doublereal);
+
+    /* Local variables */
+    static doublereal bh, ch, bw, cw, c0h, c10h, c11h, phh, doy, beta, a_ht__,
+	     b_ht__, c_ht__, sine, ht_corr_coef__, gamma, hs_km__, topcon, 
+	    ht_corr__;
+
+/* + */
+/*  - - - - - - - - - */
+/*   V M F 1 _ H T */
+/*  - - - - - - - - - */
+
+/*  This routine is part of the International Earth Rotation and */
+/*  Reference Systems Service (IERS) Conventions software collection. */
+
+/*  This subroutine determines the Vienna Mapping Function 1 (VMF1) (Boehm et al. 2006). */
+
+/*     :------------------------------------------: */
+/*     :                                          : */
+/*     :                 IMPORTANT                : */
+/*     :                                          : */
+/*     :  This version uses height correction!    : */
+/*     :  It has to be used with the VMF Grid     : */
+/*     :  located at the website mentioned in     : */
+/*     :  the Notes.                              : */
+/*     :__________________________________________: */
+
+/*  In general, Class 1, 2, and 3 models represent physical effects that */
+/*  act on geodetic parameters while canonical models provide lower-level */
+/*  representations or basic computations that are used by Class 1, 2, or */
+/*  3 models. */
+
+/*  Status: Class 1 model */
+
+/*     Class 1 models are those recommended to be used a priori in the */
+/*     reduction of raw space geodetic data in order to determine */
+/*     geodetic parameter estimates. */
+/*     Class 2 models are those that eliminate an observational */
+/*     singularity and are purely conventional in nature. */
+/*     Class 3 models are those that are not required as either Class */
+/*     1 or 2. */
+/*     Canonical models are accepted as is and cannot be classified as a */
+/*     Class 1, 2, or 3 model. */
+
+/* int vmf1_ht__(doublereal *ah, doublereal *aw, doublereal *
+	dmjd, doublereal *dlat, doublereal *ht, doublereal *zd, doublereal *
+	vmf1h, doublereal *vmf1w)
+/*  Given: */
+/*     AH             d      Hydrostatic coefficient a (Note 1) */
+/*     AW             d      Wet coefficient a (Note 1) */
+/*     DMJD           d      Modified Julian Date */
+/*     DLAT           d      Latitude given in radians (North Latitude) */
+/*     HT             d      Ellipsoidal height given in meters */
+/*     ZD             d      Zenith distance in radians */
+
+/*  Returned: */
+/*     VMF1H          d      Hydrostatic mapping function (Note 2) */
+/*     VMF1W          d      Wet mapping function (Note 2) */
+
+/*  Notes: */
+
+/*  1) The coefficients can be obtained from the primary website */
+/*     http://ggosatm.hg.tuwien.ac.at/DELAY/ or the back-up website */
+/*     http://www.hg.tuwien.ac.at/~ecmwf1/. */
+
+/*  2) The mapping functions are dimensionless scale factors. */
+
+/*  Test case: */
+/*     given input: AH   = 0.00127683D0 */
+/*                  AW   = 0.00060955D0 */
+/*                  DMJD = 55055D0 */
+/*                  DLAT = 0.6708665767D0 radians (NRAO, Green Bank, WV) */
+/*                  HT   = 824.17D0 meters */
+/*                  ZD   = 1.278564131D0 radians */
+
+/*     expected output: VMF1H = 3.423513691014495652D0 */
+/*                      VMF1W = 3.449100942061193553D0 */
+
+/*  References: */
+
+/*     Boehm, J., Werl, B., and Schuh, H., (2006), */
+/*     "Troposhere mapping functions for GPS and very long baseline */
+/*     interferometry from European Centre for Medium-Range Weather */
+/*     Forecasts operational analysis data," J. Geophy. Res., Vol. 111, */
+/*     B02406, doi:10.1029/2005JB003629 */
+
+/*     Petit, G. and Luzum, B. (eds.), IERS Conventions (2010), */
+/*     IERS Technical Note No. 36, BKG (2010) */
+
+/*  Revisions: */
+/*  2005 October 02 J. Boehm     Original code */
+/*  2009 August 17 B.E. Stetzler Added header and copyright */
+/*  2009 August 17 B.E. Stetzler More modifications and defined twopi */
+/*  2009 August 17 B.E. Stetzler Provided test case */
+/*  2009 August 17 B.E. Stetzler Capitalized all variables for FORTRAN 77 */
+/*                               compatibility */
+/*  2010 September 08 B.E. Stetzler   Provided new primary website to obtain */
+/*                                    VMF coefficients */
+/* ----------------------------------------------------------------------- */
+/* +--------------------------------------------------------------------- */
+/*     Reference day is 28 January 1980 */
+/*     This is taken from Niell (1996) to be consistent */
+/* ---------------------------------------------------------------------- */
+    doy = *dmjd - 44239. - 27;
+    bh = .0029;
+    c0h = .062;
+    if (*dlat < 0.) {
+/* southern hemisphere */
+	phh = 3.1415926535897932384626433;
+	c11h = .007;
+	c10h = .002;
+    } else {
+/* northern hemisphere */
+	phh = 0.;
+	c11h = .005;
+	c10h = .001;
+    }
+    ch = c0h + ((cos(doy / 365.25 * 6.283185307179586476925287 + phh) + 1.) * 
+	    c11h / 2. + c10h) * (1. - cos(*dlat));
+    sine = sin(1.5707963267948966 - *zd);
+    beta = bh / (sine + ch);
+    gamma = *ah / (sine + beta);
+    topcon = *aw / (bw / (cw + 1.) + 1.) + 1.;
+    *vmf1h = topcon / (sine + gamma);
+/*  Compute the height correction (Niell, 1996) */
+    a_ht__ = 2.53e-5;
+    b_ht__ = .00549;
+    c_ht__ = .00114;
+    hs_km__ = *ht / 1e3;
+    beta = b_ht__ / (sine + c_ht__);
+    gamma = a_ht__ / (sine + beta);
+    topcon = a_ht__ / (b_ht__ / (c_ht__ + 1.) + 1.) + 1.;
+    ht_corr_coef__ = 1. / sine - topcon / (sine + gamma);
+    ht_corr__ = ht_corr_coef__ * hs_km__;
+    *vmf1h += ht_corr__;
+    bw = .00146;
+    cw = .04391;
+    beta = bw / (sine + cw);
+    gamma = *aw / (sine + beta);
+    topcon = *aw / (bw / (cw + 1.) + 1.) + 1.;
+    *vmf1w = topcon / (sine + gamma);
+/* Finished. */
+/* +---------------------------------------------------------------------- */
+
+/*  Copyright (C) 2008 */
+/*  IERS Conventions Center */
+
+/*  ================================== */
+/*  IERS Conventions Software License */
+/*  ================================== */
+
+/*  NOTICE TO USER: */
+
+/*  BY USING THIS SOFTWARE YOU ACCEPT THE FOLLOWING TERMS AND CONDITIONS */
+/*  WHICH APPLY TO ITS USE. */
+
+/*  1. The Software is provided by the IERS Conventions Center ("the */
+/*     Center"). */
+
+/*  2. Permission is granted to anyone to use the Software for any */
+/*     purpose, including commercial applications, free of charge, */
+/*     subject to the conditions and restrictions listed below. */
+
+/*  3. You (the user) may adapt the Software and its algorithms for your */
+/*     own purposes and you may distribute the resulting "derived work" */
+/*     to others, provided that the derived work complies with the */
+/*     following requirements: */
+
+/*     a) Your work shall be clearly identified so that it cannot be */
+/*        mistaken for IERS Conventions software and that it has been */
+/*        neither distributed by nor endorsed by the Center. */
+
+/*     b) Your work (including source code) must contain descriptions of */
+/*        how the derived work is based upon and/or differs from the */
+/*        original Software. */
+
+/*     c) The name(s) of all modified routine(s) that you distribute */
+/*        shall be changed. */
+
+/*     d) The origin of the IERS Conventions components of your derived */
+/*        work must not be misrepresented; you must not claim that you */
+/*        wrote the original Software. */
+
+/*     e) The source code must be included for all routine(s) that you */
+/*        distribute.  This notice must be reproduced intact in any */
+/*        source distribution. */
+
+/*  4. In any published work produced by the user and which includes */
+/*     results achieved by using the Software, you shall acknowledge */
+/*     that the Software was used in obtaining those results. */
+
+/*  5. The Software is provided to the user "as is" and the Center makes */
+/*     no warranty as to its use or performance.   The Center does not */
+/*     and cannot warrant the performance or results which the user may */
+/*     obtain by using the Software.  The Center makes no warranties, */
+/*     express or implied, as to non-infringement of third party rights, */
+/*     merchantability, or fitness for any particular purpose.  In no */
+/*     event will the Center be liable to the user for any consequential, */
+/*     incidental, or special damages, including any lost profits or lost */
+/*     savings, even if a Center representative has been advised of such */
+/*     damages, or for any claim by any third party. */
+
+/*  Correspondence concerning IERS Conventions software should be */
+/*  addressed as follows: */
+
+/*                     Gerard Petit */
+/*     Internet email: gpetit[at]bipm.org */
+/*     Postal address: IERS Conventions Center */
+/*                     Time, frequency and gravimetry section, BIPM */
+/*                     Pavillon de Breteuil */
+/*                     92312 Sevres  FRANCE */
+
+/*     or */
+
+/*                     Brian Luzum */
+/*     Internet email: brian.luzum[at]usno.navy.mil */
+/*     Postal address: IERS Conventions Center */
+/*                     Earth Orientation Department */
+/*                     3450 Massachusetts Ave, NW */
+/*                     Washington, DC 20392 */
+
+
+/* ----------------------------------------------------------------------- */
+    return 0;
+} /* vmf1_ht__ */
+
