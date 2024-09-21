@@ -1,4 +1,4 @@
-from vmf_grid_lib import *
+from scripts.lib import *
 
 for estacao in estacoes:
     lat, lon, h = estacoes[estacao]
