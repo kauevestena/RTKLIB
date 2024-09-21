@@ -3593,64 +3593,8 @@ else if (opt == 2)
 extern double tropmodel(gtime_t time, const double *pos, const double *azel,
                         double humi)
 {
-    FILE *fp;
-
-    char * line = NULL;
-    size_t len = 0;
-    ssize_t read;
-
-    fp = fopen("/home/kauevestena/data/laix/tropo.txt","r");
-
-
-    FILE * fout;
-
-    long epochtime;
-
-    double zhd, zwd;
-
-    fout = fopen("/home/kauevestena/data/laix/out.txt","a+");
-    /* fprintf(fout,"epoch: %i",time.time); */
-    /*printf("\n\n\n epoch: %i \n",time.time);*/
-
-    char *token0;
-    char *token1;
-    char *token2;
-
-    unsigned int i = 0;
-    while ((read = getline(&line, &len, fp)) != -1) {
-      /*  fprintf(fout,"Retrieved line of length %zu:\n", read);
-        fprintf(fout,"%s", line); */
-        token0 = strtok(line, " ");
-        token1 = strtok(NULL, " ");
-        token2 = strtok(NULL, " ");
-
-        epochtime = atoi(token0);
-        zhd = atof(token1);
-        zwd = atof(token2);
-
-        if (epochtime == time.time)
-        {
-            break;
-        }
-
-        i++;
-
-        /*
-        if (i < 3)
-        {
-            printf("epoch: %i zhd: %f zwd: %f \n",epochtime,zhd,zwd);
-        }
-        */
-    }
-
-    fclose(fp);
-    
-
-    fprintf(fout,"epoch: %i zhd: %f zwd: %f ",epochtime,zhd,zwd);
-    /* ******************************************************************* */
-
     const double temp0=15.0; /* temparature at sea level */
-    double hgt,pres,temp,e,z,trph,trpw,td2,dryf,wetf,cpwetf;
+    double hgt,pres,temp,e,z,trph,trpw;
     
     if (pos[2]<-100.0||1E4<pos[2]||azel[1]<=0) return 0.0;
     
@@ -3665,35 +3609,7 @@ extern double tropmodel(gtime_t time, const double *pos, const double *azel,
     z=PI/2.0-azel[1];
     trph=0.0022768*pres/(1.0-0.00266*cos(2.0*pos[0])-0.00028*hgt/1E3)/cos(z);
     trpw=0.002277*(1255.0/temp+0.05)*e/cos(z);
-
-    /* ******************************** */
-
-
-    /* double initVal = 0.0; */
-
- /*
-    dryf =  tropmapf(time,pos,azel,NULL,1);
-    wetf =  tropmapf(time,pos,azel,NULL,2);
-    */
-
-   dryf = nmf_dry(time,pos,azel);
-   wetf = nmf_wet(time,pos,azel);
-
-    /* cpwetf = wetf; */
-    double tsaas;
-
-    tsaas=trph+trpw;
-    td2 = (zhd*dryf)+(zwd*wetf);
-
-   fprintf(fout,"trph: %f trpw: %f tsaas: %f dryf: %f wetf: %f zhd*dryf: %f zwd*wetf: %f td2: %f az: %f el: %f \n",trph, trpw,tsaas,dryf,wetf,zhd*dryf,zwd*wetf,td2,azel[0]*R2D,azel[1]*R2D);
-
-    fclose(fout);
-
-   /* return td2; */
-
-    /* ********************************* */
-
-    return zhd*dryf+zwd*wetf;
+    return trph+trpw;
 }
 
 

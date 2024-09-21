@@ -877,7 +877,7 @@ static double prectrop(gtime_t time, const double *pos, const double *azel,
     
 
 
-/*     constants that python will deal to convert and find the stuff
+    /*     constants that python will deal to convert and find the stuff
  */
 
     double prectrop_pi = 3.1415926535897932384626433;
@@ -912,13 +912,13 @@ static double prectrop(gtime_t time, const double *pos, const double *azel,
     fprintf(fout_constants,"%s,%i",stationame,time.time);
     fclose(fout_constants);
 
-/*     calling the python program
- */
+    /*     calling the python program
+    */
 
     system("python3 /home/lape04/Dropbox/laix2/processamentos_gnss_out21/interpolator.py");
 
 
-/*     FILE *infileStream3; 
+    /*     FILE *infileStream3; 
     char frompython[200];
     infileStream3 = fopen ("/home/lape04/Dropbox/laix2/processamentos_gnss_out21/curr_interps.txt", "r"); 
     fgets(frompython, 200, infileStream3); 
@@ -956,7 +956,7 @@ static double prectrop(gtime_t time, const double *pos, const double *azel,
     fgets(jd_interp, 200, infileStream3c); 
     fclose(infileStream3c);
 
-/*     printf("%s,%s,%s\n",ah_interp,aw_interp,jd_interp); */
+    /*     printf("%s,%s,%s\n",ah_interp,aw_interp,jd_interp); */
 
     char *ah_nothing;
     char *aw_nothing;
@@ -1000,7 +1000,7 @@ static double prectrop(gtime_t time, const double *pos, const double *azel,
 
     int res = vmf1_ht__(&ah_vmf,&aw_vmf,&jd_vmf,&pos[0],&pos[2],&vmf_zd,&m_h_vmf,&m_w_vmf); 
 
-/*     printf("%i,%20.20f,%20.20f\n",res,m_h_vmf,m_w_vmf); */
+    /*     printf("%i,%20.20f,%20.20f\n",res,m_h_vmf,m_w_vmf); */
 
     if ((opt->tropopt==TROPOPT_ESTG||opt->tropopt==TROPOPT_CORG)&&azel[1]>0.0) {
         

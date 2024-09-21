@@ -5,7 +5,7 @@ import pandas as pd
 from io import StringIO
 from tqdm import tqdm
 
-from vmf import *
+from vmf3 import *
 
 horarios = [0, 6, 12, 18]
 
