@@ -988,6 +988,34 @@ static double prectrop(gtime_t time, const double *pos, const double *azel,
                        double *var)
 /* ,const filopt_t *file_opts) */
 {
+    char *pythonpath = getenv("PYTHONPATH_RTKLIB");
+    char *ah_path = getenv("AH_SCRIPT_PATH");
+    char *station = getenv("CURRENT_STATION");
+
+    char command_ah[999];
+
+    // Construct the command with the PYTHONPATH and Python script call
+    snprintf(command_ah, sizeof(command_ah), "%s %s --station %s --time_seconds %f", pythonpath, ah_path, station, time.time);
+
+    FILE *fp = popen(command_ah, "r");
+
+    if (fp == NULL)
+    {
+        perror("Failed to run Python script");
+        exit(1);
+    }
+
+    // 'lat', 'lon', 'alt', 'ah', 'aw', 'zhd', 'zwd', 'gn_h', 'ge_h', 'gn_w', 'ge_w' are the output variables from the Python script, from a print command:
+
+    double lat, lon, alt, ah, aw, zhd, zwd, gn_h, ge_h, gn_w, ge_w;
+
+    if (fscanf(fp, "%f %f %f %f %f %f %f %f %f %f %f", &lat, &lon, &alt, &ah, &aw, &zhd, &zwd, &gn_h, &ge_h, &gn_w, &ge_w) != 11)
+    {
+        perror("Failed to read the output");
+        pclose(fp);
+        exit(1);
+    }
+
     const double zazel[] = {0.0, PI / 2.0};
     double zhd, m_h, m_w, cotz, grad_n, grad_e;
 

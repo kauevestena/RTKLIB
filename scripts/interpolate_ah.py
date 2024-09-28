@@ -65,8 +65,8 @@ def main():
     data_begin = parse_data_file(path_begin)
     data_end = parse_data_file(path_end)
 
-    print(data_begin)
-    print(data_end)
+    # print(data_begin)
+    # print(data_end)
 
     lat = data_begin["data"]["lat"]
     lon = data_begin["data"]["lon"]
@@ -117,6 +117,7 @@ def main():
     # print all values in the final_data dictionary, in the same line, with 10 decimal places:
     final_data_str = ", ".join([f"{value:.10f}" for value in final_data.values()])
     print(final_data_str)
+    print(final_data.keys())
 
 
 if __name__ == "__main__":
