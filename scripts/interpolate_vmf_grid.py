@@ -11,7 +11,9 @@ for estacao in tqdm(estacoes):
         for mes in meses:
 
             for dia in tqdm(days_of_month(mes, ano)):
-                folderpath = os.path.join(folder, estacao, str(ano), str(mes), str(dia))
+                folderpath = os.path.join(
+                    base_folder, estacao, str(ano), str(mes), str(dia)
+                )
 
                 create_dir(folderpath)
 

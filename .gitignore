@@ -170,3 +170,6 @@ Release_Build
 Debug_Build
 __history
 app/rnx2rtkp/gcc/rnx2rtkp
+scripts/tests.py
+
+.vscode

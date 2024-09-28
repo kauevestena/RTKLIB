@@ -4,8 +4,15 @@ import calendar, os
 import pandas as pd
 from io import StringIO
 from tqdm import tqdm
+from astropy.time import Time
+
 
 # from vmf3 import *
+
+six_hours_in_seconds = 21600
+
+fileformat = ".ac3"
+
 
 horarios = [0, 6, 12, 18]
 
@@ -26,10 +33,66 @@ estacoes = {
     "POLI": (-23.555648966666667, -46.73031199722222, 730.622),
 }
 
-folder = "vmf_grid"
+estacoes_coord_fixas_mes = {
+    "UFPR": {
+        1: (-25.448366330, -49.230955455, 925.7937),
+        7: (-25.448366312, -49.230955487, 925.7908),
+    },
+    "BRAZ": {
+        1: (-15.947473053, -47.877869648, 1106.0139),
+        7: (-15.947473023, -47.877869701, 1106.0065),
+    },
+    "CUIB": {
+        1: (-15.555260742, -56.069867125, 237.4547),
+        7: (-15.555260754, -56.069867137, 237.4481),
+    },
+    "NAUS": {
+        1: (-3.022917473, -60.055017176, 93.8946),
+        7: (-3.022917447, -60.055017222, 93.8603),
+    },
+    "ONRJ": {
+        1: (-22.895698316, -43.224332344, 35.6385),
+        7: (-22.895698284, -43.224332372, 35.6312),
+    },
+    "PERC": {
+        1: (-8.058798649, -34.950385460, 12.2648),
+        7: (-8.058798626, -34.950385510, 12.2525),
+    },
+    "POAL": {
+        1: (-30.074040221, -51.119765334, 76.7476),
+        7: (-30.074040185, -51.119765409, 76.7358),
+    },
+    "POLI": {
+        1: (-23.555645502, -46.730312584, 730.6143),
+        7: (-23.555645479, -46.730312597, 730.6135),
+    },
+    "SAGA": {
+        1: (-0.143852298, -67.057781654, 94.8920),
+        7: (-0.143852264, -67.057781693, 94.8773),
+    },
+    "SSA1": {
+        1: (-12.975155975, -38.516485496, -2.1002),
+        7: (-12.975155941, -38.516485520, -2.1078),
+    },
+}
+
+base_folder = "vmf_grid"
 
 
 def ajustar_longitude(lon):
+    """
+    Ajusta a longitude fornecida para estar no intervalo [0, 360).
+
+    Parameters
+    ----------
+    lon : float
+        Longitude em graus decimais.
+
+    Returns
+    -------
+    float
+        Longitude ajustada para estar no intervalo [0, 360).
+    """
     if lon < 0:
         lon += 360
     return lon
@@ -45,7 +108,9 @@ def baixar_arquivo_bruto(dia, mes, ano, horario, caminho_da_pasta=None):
 
         if caminho_da_pasta:
 
-            caminho_do_arquivo = os.path.join(caminho_da_pasta, f"{horario}.ac3")
+            caminho_do_arquivo = os.path.join(
+                caminho_da_pasta, f"{horario}{fileformat}"
+            )
 
             gravar_arquivo(caminho_do_arquivo, resposta.text)
 
@@ -159,7 +224,7 @@ def processar_arquivo(
     horario_final,
 ):
 
-    caminho_arquivo = os.path.join(caminho_pasta, f"{horario_inicial}.ac3")
+    caminho_arquivo = os.path.join(caminho_pasta, f"{horario_inicial}{fileformat}")
 
     print("Primeiras linhas do arquivo:")
     print(conteudo[:500])
@@ -270,7 +335,7 @@ def create_dir(path):
         os.makedirs(path)
 
 
-create_dir(folder)
+create_dir(base_folder)
 
 
 def gravar_arquivo(caminho_arquivo, conteudo):
@@ -281,3 +346,56 @@ def gravar_arquivo(caminho_arquivo, conteudo):
 def ler_arquivo(caminho_arquivo):
     with open(caminho_arquivo, "r", encoding="utf-8") as f:
         return f.read()
+
+
+def gps_time_to_utc(gps_seconds):
+    """
+    Convert GPS time in seconds since GPS epoch to UTC datetime.
+
+    Parameters:
+        gps_seconds (float): GPS time in seconds since GPS epoch (1980-01-06T00:00:00Z)
+
+    Returns:
+        datetime.datetime: UTC datetime corresponding to the given GPS time.
+    """
+    # Create a Time object in GPS format and TAI scale
+    t = Time(gps_seconds, format="gps", scale="tai")
+    # Convert to UTC scale
+    t_utc = t.utc
+    # Return as a naive datetime object (no timezone info)
+    return t_utc.datetime
+
+
+def find_interval(hour, intervals):
+    for interval in intervals:
+        if interval[0] <= hour < interval[1]:
+            return interval
+    return None  # In case the hour doesn't match any interval
+
+
+def parse_data_file(file_path):
+    result = {}
+
+    with open(file_path, "r") as file:
+        # Read the first line (Station, Date, Time info)
+        header_line = file.readline().strip()
+        station, year, month, day, hour, minute = header_line.split()
+
+        # Store the station and time info
+        result["station"] = station
+        result["date"] = f"{year}-{month}-{day}"
+        result["time"] = f"{hour}:{minute}"
+
+        # Read the second line (column headers)
+        headers = file.readline().strip().lower().split()
+
+        # Read the third line (values)
+        values = file.readline().strip().split()
+
+        # Combine headers and values into a dictionary
+        data_dict = {headers[i]: float(values[i]) for i in range(len(headers))}
+
+        # Add the data dictionary to the result
+        result["data"] = data_dict
+
+    return result

@@ -961,6 +961,27 @@ static void satantpcv(const double *rs, const double *rr, const pcv_t *pcv,
     antmodel_s(pcv, nadir, dant);
 }
 
+double calculate_mjd(gtime_t time)
+{
+    const double reference_mjd = 51544.5; // MJD for 2000-01-01 12:00:00 TT
+    const double seconds_in_day = 86400.0;
+
+    // Convert GPS time to UTC time
+    gtime_t utc_time = gpst2utc(time);
+
+    // Reference epoch: 2000-01-01 12:00:00 TT
+    int ep[6] = {2000, 1, 1, 12, 0, 0};
+    gtime_t ref_epoch = epoch2time(ep);
+
+    // Calculate time difference in seconds
+    double time_difference = timediff(utc_time, ref_epoch);
+
+    // Calculate MJD
+    double mjd = reference_mjd + time_difference / seconds_in_day;
+
+    return mjd;
+}
+
 /* precise tropospheric model ------------------------------------------------*/
 static double prectrop(gtime_t time, const double *pos, const double *azel,
                        const prcopt_t *opt, const double *x, double *dtdx,
@@ -976,7 +997,10 @@ static double prectrop(gtime_t time, const double *pos, const double *azel,
     /* mapping function */
     m_h = tropmapf(time, pos, azel, &m_w);
 
-    double mjd = 40587.0 + (time.time + time.sec) / 86400.0;
+    // apparently wrong way of calculating mjd
+    // double mjd = 51544.5 + (time.time + time.sec) / 86400.0;
+
+    double mjd = calculate_mjd(time);
 
     /*     constants that python will deal to convert and find the stuff
      */
