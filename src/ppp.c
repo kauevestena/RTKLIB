@@ -976,6 +976,8 @@ static double prectrop(gtime_t time, const double *pos, const double *azel,
     /* mapping function */
     m_h = tropmapf(time, pos, azel, &m_w);
 
+    double mjd = 40587.0 + (time.time + time.sec) / 86400.0;
+
     /*     constants that python will deal to convert and find the stuff
      */
 
