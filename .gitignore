@@ -173,3 +173,5 @@ app/rnx2rtkp/gcc/rnx2rtkp
 scripts/tests.py
 
 .vscode
+
+data

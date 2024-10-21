@@ -1,5 +1,6 @@
 import numpy as np
 import argparse
+from math import sin, cos, sqrt, tan
 
 
 def vmf3_ht(mjd=None, lat=None, lon=None, h_ell=None, zd=None, ah=None, aw=None):
@@ -5088,7 +5089,136 @@ def vmf3_ht(mjd=None, lat=None, lon=None, h_ell=None, zd=None, ah=None, aw=None)
     )
     ht_corr = ht_corr_coef * h_ell_km
     mfh = mfh + ht_corr
-    return mfh, mfw
+
+    return mfh, mfw, ah, aw, bh, bw, ch, cw, el
+
+def dm_de(a, b, c, el):
+    """
+    from wolfram alpha:
+    -(cos(z) - (a (cos(z) - (b cos(z))/(c + sin(z))^2))/(sin(z) + b/(c + sin(z)))^2)/(sin(z) + a/(sin(z) + b/(c + sin(z))))^2
+
+    """
+
+    cos_el = cos(el)
+    sin_el = sin(el)
+    temp1 = c + sin_el
+    temp2 = sin_el + b / temp1
+    temp3 = sin_el + a / temp2
+    denominator = temp3**2
+
+    temp4 = (b * cos_el) / (temp1**2)
+    temp5 = cos_el - temp4
+    temp6 = a * temp5
+    temp7 = temp2**2
+    temp8 = temp6 / temp7
+    numerator = -(cos_el - temp8)
+
+    result = numerator / denominator
+    return result
+
+
+def d2m_de2(a, b, c, el):
+    # Compute basic trigonometric functions
+    cos_el = cos(el)
+    sin_el = sin(el)
+
+    # Compute intermediate variables for the first derivative (func)
+    temp1 = c + sin_el
+    temp2 = sin_el + b / temp1
+    temp3 = sin_el + a / temp2
+    denominator = temp3**2
+
+    temp4 = (b * cos_el) / (temp1**2)
+    temp5 = cos_el - temp4
+    temp6 = a * temp5
+    temp7 = temp2**2
+    temp8 = temp6 / temp7
+    numerator = -(cos_el - temp8)
+
+    # Compute the first derivative (func)
+    func_value = numerator / denominator
+
+    # Now, compute derivatives of the intermediate variables
+    d_temp1 = cos_el  # derivative of temp1 w.r.t el
+
+    # Derivative of temp2
+    d_temp2_num = cos_el - (b * d_temp1) / (temp1**2)
+    d_temp2_den = 1
+    d_temp2 = d_temp2_num / d_temp2_den
+
+    # Derivative of temp3
+    d_temp3_num = cos_el - (a * d_temp2) / (temp2**2)
+    d_temp3_den = 1
+    d_temp3 = d_temp3_num / d_temp3_den
+
+    # Derivative of denominator
+    d_denominator = 2 * temp3 * d_temp3
+
+    # Derivative of temp4
+    d_temp4_num = -b * sin_el * (temp1**2) - 2 * b * cos_el * temp1 * d_temp1
+    d_temp4_den = temp1**4
+    d_temp4 = d_temp4_num / d_temp4_den
+
+    # Derivative of temp5
+    d_temp5 = -sin_el - d_temp4
+
+    # Derivative of temp6
+    d_temp6 = a * d_temp5
+
+    # Derivative of temp7
+    d_temp7 = 2 * temp2 * d_temp2
+
+    # Derivative of temp8
+    d_temp8_num = d_temp6 * temp7 - temp6 * d_temp7
+    d_temp8_den = temp7**2
+    d_temp8 = d_temp8_num / d_temp8_den
+
+    # Derivative of numerator
+    d_numerator = -(-sin_el - d_temp8)  # Derivative of - (cos_el - temp8)
+
+    # Derivative of func_value (first derivative)
+    d_func_value_num = d_numerator * denominator - numerator * d_denominator
+    d_func_value_den = denominator**2
+    derivative_func_value = d_func_value_num / d_func_value_den
+
+    # Compute the second derivative (func2)
+    func2_value = -func_value + el * derivative_func_value
+    return func2_value
+
+def tropospheric_correction_vmf3(
+    mfh, mfw, ah, aw, bh, bw, ch, cw, el, az, zhd, zwd, gn_h, ge_h, gn_w, ge_w
+):
+
+    # # the mapping functions derivatives:
+    # first order
+    dmfhde = dm_de(ah, bh, ch, el)
+    dmfwde = dm_de(aw, bw, cw, el)
+
+    # second order:
+    dm2fhde2 = d2m_de2(ah, bh, ch, el)
+    dm2fwde2 = d2m_de2(aw, bw, cw, el)
+
+    # tropospheric correction:
+    # m_h_vmf * zhd + m_w_vmf * (x[0] - zhd)
+    corr_h_p1 = mfh * zhd
+
+    corr_w_p1 = mfw * zwd
+
+    gnh_mult = gn_h * cos(az) + ge_h * sin(az)
+    gnw_mult = gn_w * cos(az) + ge_w * sin(az)
+
+    corr_h_p2 = dmfhde * gnh_mult
+
+    corr_w_p2 = dmfwde * gnw_mult
+
+    corr_h_p3 = dm2fhde2 * ((gnh_mult**2) / 2)
+    corr_w_p3 = dm2fwde2 * ((gnw_mult**2) / 2)
+
+    corr_h = corr_h_p1 + corr_h_p2 + corr_h_p3
+
+    corr_w = corr_w_p1 + corr_w_p2 + corr_w_p3
+
+    return corr_h + corr_w
 
 
 # create argument parser
@@ -5108,6 +5238,11 @@ parser = argparse.ArgumentParser()
 #        o mfw: wet mapping factor
 # all inputs are mandatory, they shall have no default value
 
+# cotz = 1.0 / tan(azel[1]);
+
+# grad_n = m_w * cotz * cos(azel[0]);
+# grad_e = m_w * cotz * sin(azel[0]);
+
 parser.add_argument(
     "--ah", type=float, help="hydrostatic mf coefficient a", required=True
 )
@@ -5115,23 +5250,49 @@ parser.add_argument("--aw", type=float, help="wet mf coefficient a", required=Tr
 parser.add_argument("--mjd", type=float, help="modified Julian date", required=True)
 parser.add_argument("--lat", type=float, help="latitude (radians)", required=True)
 parser.add_argument("--lon", type=float, help="longitude (radians)", required=True)
+parser.add_argument("--gn_h", type=float, help="GN H", required=True)
+parser.add_argument("--gn_w", type=float, help="GN W", required=True)
+parser.add_argument("--ge_h", type=float, help="GE H", required=True)
+parser.add_argument("--ge_w", type=float, help="GE W", required=True)
 parser.add_argument("--h_ell", type=float, help="ellipsoidal height (m)", required=True)
 parser.add_argument("--zd", type=float, help="zenith distance (radians)", required=True)
-parser.add_argument("--outpath", type=str, help="output path", required=True)
+parser.add_argument(
+    "--az", type=float, help="satelllite azimuth (radians)", required=True
+)
+# parser.add_argument("--outpath", type=str, help="output path", required=True)
 
 
 args = parser.parse_args()
 
+# argument list:
+# ah, aw, mjd, lat, lon, h_ell, zd, az, gn_h, ge_h, gn_w, ge_w
+
 
 def main():
-    mfh, mfw = vmf3_ht(
+    mfh, mfw, ah, aw, bh, bw, ch, cw, el = vmf3_ht(
         args.ah, args.aw, args.mjd, args.lat, args.lon, args.h_ell, args.zd
     )
 
-    # with open(args.outpath, "w") as f:
-    #     f.write(f"{mfh:.10},{mfw:.10}")
+    trop_corr = tropospheric_correction_vmf3(
+        mfh=mfh,
+        mfw=mfw,
+        ah=ah,
+        aw=aw,
+        bh=bh,
+        bw=bw,
+        ch=ch,
+        cw=cw,
+        el=el,
+        az=args.az,
+        zhd=args.h_ell,
+        zwd=args.zd,
+        gn_h=args.gn_h,
+        ge_h=args.ge_h,
+        gn_w=args.gn_w,
+        ge_w=args.ge_w,
+    )
 
-    print(f"{mfh:.10f},{mfw:.10f}")
+    print(f"{trop_corr:.10f}")
 
 
 if __name__ == "__main__":

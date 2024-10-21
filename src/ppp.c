@@ -982,6 +982,26 @@ double calculate_mjd(gtime_t time)
     return mjd;
 }
 
+/* Function to compute the VMF3 mapping function */
+double mapping_function(double e, double a, double b, double c)
+{
+    double sin_e = sin(e);
+
+    /* Compute D3 = sin(e) + c */
+    double D3 = sin_e + c;
+
+    /* Compute D2 = sin(e) + b / D3 */
+    double D2 = sin_e + b / D3;
+
+    /* Compute D1 = sin(e) + a / D2 */
+    double D1 = sin_e + a / D2;
+
+    /* Compute mapping function m(e) = 1 / D1 */
+    double m = 1.0 / D1;
+
+    return m;
+}
+
 /* precise tropospheric model ------------------------------------------------*/
 static double prectrop(gtime_t time, const double *pos, const double *azel,
                        const prcopt_t *opt, const double *x, double *dtdx,
@@ -990,18 +1010,20 @@ static double prectrop(gtime_t time, const double *pos, const double *azel,
 {
     char *pythonpath = getenv("PYTHONPATH_RTKLIB");
     char *ah_path = getenv("AH_SCRIPT_PATH");
+    char *vmf3_path = getenv("AH_SCRIPT_PATH");
     char *station = getenv("CURRENT_STATION");
 
     char command_ah[999];
+    char command_vmf3[999];
 
-    // Construct the command with the PYTHONPATH and Python script call
+    // Construct the command with the PYTHONPATH and Python script call for AH
     snprintf(command_ah, sizeof(command_ah), "%s %s --station %s --time_seconds %f", pythonpath, ah_path, station, time.time);
 
     FILE *fp = popen(command_ah, "r");
 
     if (fp == NULL)
     {
-        perror("Failed to run Python script");
+        perror("Failed to run Python script for AH");
         exit(1);
     }
 
@@ -1016,165 +1038,194 @@ static double prectrop(gtime_t time, const double *pos, const double *azel,
         exit(1);
     }
 
-    const double zazel[] = {0.0, PI / 2.0};
-    double zhd, m_h, m_w, cotz, grad_n, grad_e;
-
-    /* zenith hydrostatic delay */
-    zhd = tropmodel(time, pos, zazel, 0.0);
-
-    /* mapping function */
-    m_h = tropmapf(time, pos, azel, &m_w);
-
-    // apparently wrong way of calculating mjd
-    // double mjd = 51544.5 + (time.time + time.sec) / 86400.0;
+    // Construct the command with the PYTHONPATH and Python script call for VMF3
+    // argument list:
+    // ah, aw, mjd, lat, lon, h_ell, zd, az, gn_h, ge_h, gn_w, ge_w
 
     double mjd = calculate_mjd(time);
 
-    /*     constants that python will deal to convert and find the stuff
-     */
+    snprintf(command_vmf3, sizeof(command_vmf3), "%s %s --mjd %f --lat %f --lon %f --h_ell %f --zd %f --az %f --gn_h %f --ge_h %f --gn_w %f --ge_w %f", pythonpath, vmf3_path, mjd, lat, lon, alt, zwd, azel[1], gn_h, ge_h, gn_w, ge_w);
 
-    double prectrop_pi = 3.1415926535897932384626433;
+    FILE *fp2 = popen(command_vmf3, "r");
 
-    double conv_factor = 180.0 / prectrop_pi;
-
-    /*
-        thx: https://smallbusiness.chron.com/read-first-line-file-c-programming-29321.html
-    */
-
-    FILE *infileStream;
-    char fileText[200];
-    infileStream = fopen("/home/lape04/Dropbox/laix2/processamentos_gnss_out21/curr_delaypath.txt", "r");
-    fgets(fileText, 200, infileStream);
-    fclose(infileStream);
-
-    FILE *infileStream2;
-    char stationame[200];
-    infileStream2 = fopen("/home/lape04/Dropbox/laix2/processamentos_gnss_out21/curr_station_name.txt", "r");
-    fgets(stationame, 200, infileStream2);
-    fclose(infileStream2);
-
-    FILE *fout_constants;
-    fout_constants = fopen("/home/lape04/Dropbox/laix2/processamentos_gnss_out21/curr_constants.txt", "w+");
-    fprintf(fout_constants, "%s,%i", stationame, time.time);
-    fclose(fout_constants);
-
-    /*     calling the python program
-     */
-
-    system("python3 /home/lape04/Dropbox/laix2/processamentos_gnss_out21/interpolator.py");
-
-    /*     FILE *infileStream3;
-    char frompython[200];
-    infileStream3 = fopen ("/home/lape04/Dropbox/laix2/processamentos_gnss_out21/curr_interps.txt", "r");
-    fgets(frompython, 200, infileStream3);
-    fclose(infileStream3);
-
-    char ah_interp[100];
-    char aw_interp[100];
-    char jd_interp[100];
-
-    char *separator = strtok(frompython, ',');
-    strcpy(ah_interp,separator);
-    separator = strtok(NULL, ',');
-    strcpy(aw_interp,separator);
-    separator = strtok(NULL, ',');
-    strcpy(jd_interp,separator);
-
-     */
-
-    FILE *infileStream3a;
-    char ah_interp[200];
-    infileStream3a = fopen("/home/lape04/Dropbox/laix2/processamentos_gnss_out21/curr_ah.txt", "r");
-    fgets(ah_interp, 200, infileStream3a);
-    fclose(infileStream3a);
-
-    FILE *infileStream3b;
-    char aw_interp[200];
-    infileStream3b = fopen("/home/lape04/Dropbox/laix2/processamentos_gnss_out21/curr_aw.txt", "r");
-    fgets(aw_interp, 200, infileStream3b);
-    fclose(infileStream3b);
-
-    FILE *infileStream3c;
-    char jd_interp[200];
-    infileStream3c = fopen("/home/lape04/Dropbox/laix2/processamentos_gnss_out21/curr_jd.txt", "r");
-    fgets(jd_interp, 200, infileStream3c);
-    fclose(infileStream3c);
-
-    /*     printf("%s,%s,%s\n",ah_interp,aw_interp,jd_interp); */
-
-    char *ah_nothing;
-    char *aw_nothing;
-    char *jd_nothing;
-
-    double ah_vmf, aw_vmf, jd_vmf;
-
-    ah_vmf = strtod(ah_interp, &ah_nothing);
-    aw_vmf = strtod(aw_interp, &aw_nothing);
-    jd_vmf = strtod(jd_interp, &jd_nothing);
-
-    /*   printf("%lf,%lf,%lf\n",ah_vmf,aw_vmf,jd_vmf); */
-
-    /* int vmf1_ht__(doublereal *ah, doublereal *aw, doublereal *
-    dmjd, doublereal *dlat, doublereal *ht, doublereal *zd, doublereal *
-    vmf1h, doublereal *vmf1w)
-    /*  Given: */
-    /*     AH             d      Hydrostatic coefficient a (Note 1) */
-    /*     AW             d      Wet coefficient a (Note 1) */
-    /*     DMJD           d      Modified Julian Date */
-    /*     DLAT           d      Latitude given in radians (North Latitude) */
-    /*     HT             d      Ellipsoidal height given in meters */
-    /*     ZD             d      Zenith distance in radians */
-
-    /*  Returned: */
-    /*     VMF1H          d      Hydrostatic mapping function (Note 2) */
-    /*     VMF1W          d      Wet mapping function (Note 2) */
-
-    double m_h_vmf, m_w_vmf;
-
-    double vmf_zd = (prectrop_pi / 2) - azel[1];
-
-    int res = vmf1_ht__(&ah_vmf, &aw_vmf, &jd_vmf, &pos[0], &pos[2], &vmf_zd, &m_h_vmf, &m_w_vmf);
-
-    /*     printf("%i,%20.20f,%20.20f\n",res,m_h_vmf,m_w_vmf); */
-
-    if ((opt->tropopt == TROPOPT_ESTG || opt->tropopt == TROPOPT_CORG) && azel[1] > 0.0)
+    if (fp2 == NULL)
     {
-
-        /* m_w=m_0+m_0*cot(el)*(Gn*cos(az)+Ge*sin(az)): ref [6] */
-        cotz = 1.0 / tan(azel[1]);
-
-        grad_n = m_w * cotz * cos(azel[0]);
-        grad_e = m_w * cotz * sin(azel[0]);
-        m_w += grad_n * x[1] + grad_e * x[2];
-
-        grad_n = m_w_vmf * cotz * cos(azel[0]);
-        grad_e = m_w_vmf * cotz * sin(azel[0]);
-        m_w_vmf += grad_n * x[1] + grad_e * x[2];
-
-        dtdx[1] = grad_n * (x[0] - zhd);
-        dtdx[2] = grad_e * (x[0] - zhd);
+        perror("Failed to run Python script for VMF3");
+        exit(1);
     }
-    dtdx[0] = m_w_vmf;
-    *var = SQR(0.01);
 
-    FILE *fout;
-    fout = fopen(fileText, "a+");
-    /* fout = fopen(*fopt,"a+"); */
+    double vmf_tropcorr;
 
-    fprintf(fout, "Time: %i ZHD_incl: %f ZWD_incl: %f grad_e: %f grad_n: %f m_h_nmf: %f m_w_nmf: %f Atraso Inclinado: %f ZTD: %f mh_vmf: %f mw_vmf: %f dif_mh %f dif_mw %f\n", time.time, m_h * zhd, m_w * (x[0] - zhd), grad_e, grad_n, m_h, m_w, m_h * zhd + m_w * (x[0] - zhd), x[0], m_h_vmf, m_w_vmf, fabs(m_h) - fabs(m_h_vmf), fabs(m_w) - fabs(m_w_vmf));
-    fclose(fout);
+    if (fscanf(fp2, "%f", &vmf_tropcorr) != 1)
+    {
+        perror("Failed to read the output");
+        pclose(fp2);
+        exit(1);
+    }
 
-    /* FILE * fout;
-    fout = fopen("/home/lais/Downloads/RTKLIB-master/app/rnx2rtkp/outppp.txt","a+");
-    fprintf(fout,"ZHD_incl: %f ZWD_incl: %f grad_e: %f grad_n: %f m_w grad: %f Atraso Inclinado Grad: %f m_w: %f Atraso Inclinado: %f ZTD: %f \n", m_h*zhd, m_w*(x[0]-zhd),grad_e,grad_n,m_w+(grad_n*x[1]+grad_e*x[2]),m_h*zhd+(m_w+(grad_n*x[1]+grad_e*x[2]))*(x[0]-zhd),m_w,m_h*zhd+m_w*(x[0]-zhd),x[0]);
-    fclose(fout);*/
+    // // the vmf3.py calling:
 
-    /*  ORIGINAL: (NMF) */
-    /*   return m_h*zhd+m_w*(x[0]-zhd);
-     */
+    // double mjd = calculate_mjd(time);
 
-    /* MODIFIED: VMF */
-    return m_h_vmf * zhd + m_w_vmf * (x[0] - zhd);
+    // const double zazel[] = {0.0, PI / 2.0};
+    // double zhd, m_h, m_w, cotz, grad_n, grad_e;
+
+    // /* zenith hydrostatic delay */
+    // zhd = tropmodel(time, pos, zazel, 0.0);
+
+    // /* mapping function */
+    // m_h = tropmapf(time, pos, azel, &m_w);
+
+    // // apparently wrong way of calculating mjd
+    // // double mjd = 51544.5 + (time.time + time.sec) / 86400.0;
+
+    // /*     constants that python will deal to convert and find the stuff
+    //  */
+
+    // double prectrop_pi = 3.1415926535897932384626433;
+
+    // double conv_factor = 180.0 / prectrop_pi;
+
+    // /*
+    //     thx: https://smallbusiness.chron.com/read-first-line-file-c-programming-29321.html
+    // */
+
+    // FILE *infileStream;
+    // char fileText[200];
+    // infileStream = fopen("/home/lape04/Dropbox/laix2/processamentos_gnss_out21/curr_delaypath.txt", "r");
+    // fgets(fileText, 200, infileStream);
+    // fclose(infileStream);
+
+    // FILE *infileStream2;
+    // char stationame[200];
+    // infileStream2 = fopen("/home/lape04/Dropbox/laix2/processamentos_gnss_out21/curr_station_name.txt", "r");
+    // fgets(stationame, 200, infileStream2);
+    // fclose(infileStream2);
+
+    // FILE *fout_constants;
+    // fout_constants = fopen("/home/lape04/Dropbox/laix2/processamentos_gnss_out21/curr_constants.txt", "w+");
+    // fprintf(fout_constants, "%s,%i", stationame, time.time);
+    // fclose(fout_constants);
+
+    // /*     calling the python program
+    //  */
+
+    // system("python3 /home/lape04/Dropbox/laix2/processamentos_gnss_out21/interpolator.py");
+
+    // /*     FILE *infileStream3;
+    // char frompython[200];
+    // infileStream3 = fopen ("/home/lape04/Dropbox/laix2/processamentos_gnss_out21/curr_interps.txt", "r");
+    // fgets(frompython, 200, infileStream3);
+    // fclose(infileStream3);
+
+    // char ah_interp[100];
+    // char aw_interp[100];
+    // char jd_interp[100];
+
+    // char *separator = strtok(frompython, ',');
+    // strcpy(ah_interp,separator);
+    // separator = strtok(NULL, ',');
+    // strcpy(aw_interp,separator);
+    // separator = strtok(NULL, ',');
+    // strcpy(jd_interp,separator);
+
+    //  */
+
+    // FILE *infileStream3a;
+    // char ah_interp[200];
+    // infileStream3a = fopen("/home/lape04/Dropbox/laix2/processamentos_gnss_out21/curr_ah.txt", "r");
+    // fgets(ah_interp, 200, infileStream3a);
+    // fclose(infileStream3a);
+
+    // FILE *infileStream3b;
+    // char aw_interp[200];
+    // infileStream3b = fopen("/home/lape04/Dropbox/laix2/processamentos_gnss_out21/curr_aw.txt", "r");
+    // fgets(aw_interp, 200, infileStream3b);
+    // fclose(infileStream3b);
+
+    // FILE *infileStream3c;
+    // char jd_interp[200];
+    // infileStream3c = fopen("/home/lape04/Dropbox/laix2/processamentos_gnss_out21/curr_jd.txt", "r");
+    // fgets(jd_interp, 200, infileStream3c);
+    // fclose(infileStream3c);
+
+    // /*     printf("%s,%s,%s\n",ah_interp,aw_interp,jd_interp); */
+
+    // char *ah_nothing;
+    // char *aw_nothing;
+    // char *jd_nothing;
+
+    // double ah_vmf, aw_vmf, jd_vmf;
+
+    // ah_vmf = strtod(ah_interp, &ah_nothing);
+    // aw_vmf = strtod(aw_interp, &aw_nothing);
+    // jd_vmf = strtod(jd_interp, &jd_nothing);
+
+    // /*   printf("%lf,%lf,%lf\n",ah_vmf,aw_vmf,jd_vmf); */
+
+    // /* int vmf1_ht__(doublereal *ah, doublereal *aw, doublereal *
+    // dmjd, doublereal *dlat, doublereal *ht, doublereal *zd, doublereal *
+    // vmf1h, doublereal *vmf1w)
+    // /*  Given: */
+    // /*     AH             d      Hydrostatic coefficient a (Note 1) */
+    // /*     AW             d      Wet coefficient a (Note 1) */
+    // /*     DMJD           d      Modified Julian Date */
+    // /*     DLAT           d      Latitude given in radians (North Latitude) */
+    // /*     HT             d      Ellipsoidal height given in meters */
+    // /*     ZD             d      Zenith distance in radians */
+
+    // /*  Returned: */
+    // /*     VMF1H          d      Hydrostatic mapping function (Note 2) */
+    // /*     VMF1W          d      Wet mapping function (Note 2) */
+
+    // double m_h_vmf, m_w_vmf;
+
+    // double vmf_zd = (prectrop_pi / 2) - azel[1];
+
+    // int res = vmf1_ht__(&ah_vmf, &aw_vmf, &jd_vmf, &pos[0], &pos[2], &vmf_zd, &m_h_vmf, &m_w_vmf);
+
+    // /*     printf("%i,%20.20f,%20.20f\n",res,m_h_vmf,m_w_vmf); */
+
+    // if ((opt->tropopt == TROPOPT_ESTG || opt->tropopt == TROPOPT_CORG) && azel[1] > 0.0)
+    // {
+
+    //     /* m_w=m_0+m_0*cot(el)*(Gn*cos(az)+Ge*sin(az)): ref [6] */
+    //     cotz = 1.0 / tan(azel[1]);
+
+    //     grad_n = m_w * cotz * cos(azel[0]);
+    //     grad_e = m_w * cotz * sin(azel[0]);
+    //     m_w += grad_n * x[1] + grad_e * x[2];
+
+    //     grad_n = m_w_vmf * cotz * cos(azel[0]);
+    //     grad_e = m_w_vmf * cotz * sin(azel[0]);
+    //     m_w_vmf += grad_n * x[1] + grad_e * x[2];
+
+    //     dtdx[1] = grad_n * (x[0] - zhd);
+    //     dtdx[2] = grad_e * (x[0] - zhd);
+    // }
+    // dtdx[0] = m_w_vmf;
+    // *var = SQR(0.01);
+
+    // FILE *fout;
+    // fout = fopen(fileText, "a+");
+    // /* fout = fopen(*fopt,"a+"); */
+
+    // fprintf(fout, "Time: %i ZHD_incl: %f ZWD_incl: %f grad_e: %f grad_n: %f m_h_nmf: %f m_w_nmf: %f Atraso Inclinado: %f ZTD: %f mh_vmf: %f mw_vmf: %f dif_mh %f dif_mw %f\n", time.time, m_h * zhd, m_w * (x[0] - zhd), grad_e, grad_n, m_h, m_w, m_h * zhd + m_w * (x[0] - zhd), x[0], m_h_vmf, m_w_vmf, fabs(m_h) - fabs(m_h_vmf), fabs(m_w) - fabs(m_w_vmf));
+    // fclose(fout);
+
+    // /* FILE * fout;
+    // fout = fopen("/home/lais/Downloads/RTKLIB-master/app/rnx2rtkp/outppp.txt","a+");
+    // fprintf(fout,"ZHD_incl: %f ZWD_incl: %f grad_e: %f grad_n: %f m_w grad: %f Atraso Inclinado Grad: %f m_w: %f Atraso Inclinado: %f ZTD: %f \n", m_h*zhd, m_w*(x[0]-zhd),grad_e,grad_n,m_w+(grad_n*x[1]+grad_e*x[2]),m_h*zhd+(m_w+(grad_n*x[1]+grad_e*x[2]))*(x[0]-zhd),m_w,m_h*zhd+m_w*(x[0]-zhd),x[0]);
+    // fclose(fout);*/
+
+    // /*  ORIGINAL: (NMF) */
+    // /*   return m_h*zhd+m_w*(x[0]-zhd);
+    //  */
+
+    // /* MODIFIED: VMF */
+    // return m_h_vmf * zhd + m_w_vmf * (x[0] - zhd);
+
+    return vmf_tropcorr;
 }
 /* phase and code residuals --------------------------------------------------*/
 static int res_ppp(int iter, const obsd_t *obs, int n, const double *rs,
