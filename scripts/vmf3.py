@@ -1,6 +1,16 @@
 import numpy as np
 import argparse
 from math import sin, cos, sqrt, tan
+import logging
+
+logging.basicConfig(
+    level=logging.DEBUG,
+    filename="vmf_processing.log",
+    format="%(asctime)s - %(levelname)s - %(message)s",
+    datefmt="%d-%b-%y %H:%M:%S",
+    filemode="w",
+    encoding="utf-8",
+)
 
 
 def vmf3_ht(mjd=None, lat=None, lon=None, h_ell=None, zd=None, ah=None, aw=None):
@@ -5092,6 +5102,7 @@ def vmf3_ht(mjd=None, lat=None, lon=None, h_ell=None, zd=None, ah=None, aw=None)
 
     return mfh, mfw, ah, aw, bh, bw, ch, cw, el
 
+
 def dm_de(a, b, c, el):
     """
     from wolfram alpha:
@@ -5185,6 +5196,7 @@ def d2m_de2(a, b, c, el):
     func2_value = -func_value + el * derivative_func_value
     return func2_value
 
+
 def tropospheric_correction_vmf3(
     mfh, mfw, ah, aw, bh, bw, ch, cw, el, az, zhd, zwd, gn_h, ge_h, gn_w, ge_w
 ):
@@ -5193,6 +5205,29 @@ def tropospheric_correction_vmf3(
     # first order
     dmfhde = dm_de(ah, bh, ch, el)
     dmfwde = dm_de(aw, bw, cw, el)
+
+    # re-computing gn and ge:
+    ge_h_orig = ge_h
+    ge_w_orig = ge_w
+
+    gn_h_orig = gn_h
+    gn_w_orig = gn_w
+
+    ge_h = dmfhde * sin(az)
+    ge_w = dmfwde * sin(az)
+
+    gn_h = dmfhde * cos(az)
+    gn_w = dmfwde * cos(az)
+
+    logging.info(
+        f"""
+    	v1	c1	c2
+    ge_h	{ge_h_orig}	{ge_h}	{ge_h*mfh}
+    ge_w	{ge_w_orig}	{ge_w}	{ge_w*mfw}
+    gn_h	{gn_h_orig}	{gn_h}	{gn_h*mfh}
+    gn_w	{gn_w_orig}	{gn_w}	{gn_w*mfw}
+                 """
+    )
 
     # second order:
     dm2fhde2 = d2m_de2(ah, bh, ch, el)

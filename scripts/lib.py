@@ -7,6 +7,8 @@ from tqdm import tqdm
 from astropy.time import Time
 
 
+rootpath = "/mnt/c/Users/kaue/ufpr.br/Lais Thuany Cardoso Theodoro - VMF3"
+
 # from vmf3 import *
 
 six_hours_in_seconds = 21600

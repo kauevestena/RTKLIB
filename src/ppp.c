@@ -1031,7 +1031,7 @@ static double prectrop(gtime_t time, const double *pos, const double *azel,
 
     double lat, lon, alt, ah, aw, zhd, zwd, gn_h, ge_h, gn_w, ge_w;
 
-    if (fscanf(fp, "%f %f %f %f %f %f %f %f %f %f %f", &lat, &lon, &alt, &ah, &aw, &zhd, &zwd, &gn_h, &ge_h, &gn_w, &ge_w) != 11)
+    if (fscanf(fp, "%lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf", &lat, &lon, &alt, &ah, &aw, &zhd, &zwd, &gn_h, &ge_h, &gn_w, &ge_w) != 11)
     {
         perror("Failed to read the output");
         pclose(fp);
@@ -1044,7 +1044,7 @@ static double prectrop(gtime_t time, const double *pos, const double *azel,
 
     double mjd = calculate_mjd(time);
 
-    snprintf(command_vmf3, sizeof(command_vmf3), "%s %s --mjd %f --lat %f --lon %f --h_ell %f --zd %f --az %f --gn_h %f --ge_h %f --gn_w %f --ge_w %f", pythonpath, vmf3_path, mjd, lat, lon, alt, zwd, azel[1], gn_h, ge_h, gn_w, ge_w);
+    snprintf(command_vmf3, sizeof(command_vmf3), "%s %s --mjd %lf --lat %lf --lon %lf --h_ell %lf --zd %lf --az %lf --gn_h %lf --ge_h %lf --gn_w %lf --ge_w %lf", pythonpath, vmf3_path, mjd, lat, lon, alt, zwd, azel[1], gn_h, ge_h, gn_w, ge_w);
 
     FILE *fp2 = popen(command_vmf3, "r");
 
@@ -1056,7 +1056,7 @@ static double prectrop(gtime_t time, const double *pos, const double *azel,
 
     double vmf_tropcorr;
 
-    if (fscanf(fp2, "%f", &vmf_tropcorr) != 1)
+    if (fscanf(fp2, "%lf", &vmf_tropcorr) != 1)
     {
         perror("Failed to read the output");
         pclose(fp2);
