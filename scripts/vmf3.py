@@ -5202,7 +5202,7 @@ def tropospheric_correction_vmf3(
 ):
 
     # # the mapping functions derivatives:
-    # first order
+    # first order derivative:
     dmfhde = dm_de(ah, bh, ch, el)
     dmfwde = dm_de(aw, bw, cw, el)
 
@@ -5213,25 +5213,28 @@ def tropospheric_correction_vmf3(
     gn_h_orig = gn_h
     gn_w_orig = gn_w
 
-    ge_h = dmfhde * sin(az)
-    ge_w = dmfwde * sin(az)
+    # second order derivative:
+    dm2fhde2 = d2m_de2(ah, bh, ch, el)
+    dm2fwde2 = d2m_de2(aw, bw, cw, el)
 
-    gn_h = dmfhde * cos(az)
-    gn_w = dmfwde * cos(az)
+    cos2az = (cos(az) ** 2) / 2
+    sin2az = (sin(az) ** 2) / 2
+
+    ge_h = dmfhde * sin(az) + dm2fhde2 * sin2az
+    ge_w = dmfwde * sin(az) + dm2fwde2 * sin2az
+
+    gn_h = dmfhde * cos(az) + dm2fhde2 * cos2az
+    gn_w = dmfwde * cos(az) + dm2fwde2 * cos2az
 
     logging.info(
         f"""
     	v1	c1	c2
-    ge_h	{ge_h_orig}	{ge_h}	{ge_h*mfh}
-    ge_w	{ge_w_orig}	{ge_w}	{ge_w*mfw}
-    gn_h	{gn_h_orig}	{gn_h}	{gn_h*mfh}
-    gn_w	{gn_w_orig}	{gn_w}	{gn_w*mfw}
+    ge_h	{ge_h_orig}	{ge_h}	{ge_h*mfh}	
+    ge_w	{ge_w_orig}	{ge_w}	{ge_w*mfw}	
+    gn_h	{gn_h_orig}	{gn_h}	{gn_h*mfh}	
+    gn_w	{gn_w_orig}	{gn_w}	{gn_w*mfw}	
                  """
     )
-
-    # second order:
-    dm2fhde2 = d2m_de2(ah, bh, ch, el)
-    dm2fwde2 = d2m_de2(aw, bw, cw, el)
 
     # tropospheric correction:
     # m_h_vmf * zhd + m_w_vmf * (x[0] - zhd)
