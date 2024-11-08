@@ -1,18 +1,28 @@
 import os, subprocess, glob, datetime
 from gnsscal import date2gpswd
+from lib import *
+from tqdm import tqdm
 
-rnx2rtkp_path = "/home/lape04/RTKLIB/app/rnx2rtkp/gcc/rnx2rtkp"
+# TO MODIFY:
+proc_scenario = "orig"
 
-basepath = "/home/lape04/Documents/dados_escacoes"
+####################################
+
+rnx2rtkp_path = proc_sc_execs[proc_scenario]
+
+basepath = rootpath_data
 
 epochs = ["VERAO", "INVERNO"]
 
-stations = ["UFPR", "SAGA", "AMCO", "NAUS"]
+stations = list(estacoes.keys())
 
-custom_op_modes = {"ztd": True, "ztdgrad": False}
+custom_op_modes = {
+    # "ztd": False,
+    "ztdgrad": True
+}
 
 # fixed filenames
-satant_filename = "sat.atx"
+satant_filename = "igs14.atx"
 
 # subfolders = ['fixos','relogios','efemerides','param_terra','RINEX']
 
@@ -143,24 +153,25 @@ file-eopfile       ={eop_filepath} """
 
 
 # doing the processing stuff
-with open("app_calls.txt", "w+") as calls_file:
-    for epoch in epochs:
+with open("app_calls.txt", "w+", encoding="utf-8") as calls_file:
+    for epoch in tqdm(epochs):
         epochpath = os.path.join(basepath, epoch)
 
-        for station in stations:
+        for station in tqdm(stations):
 
             # basepath for subfolders with input files
-            station_epoch_path = os.path.join(epochpath, station)
+            station_epoch_path = os.path.join(epochpath, "RBMC", station)
+            station_epoch_path_list = os.listdir(station_epoch_path)
 
             # subfolders paths
-            rinex_path = os.path.join(station_epoch_path, "RINEX")
-            clock_path = os.path.join(station_epoch_path, "relogios")
-            ephem_path = os.path.join(station_epoch_path, "efemerides")
-            eop_path = os.path.join(station_epoch_path, "param_terra")
-            station_param_files_path = os.path.join(station_epoch_path, "fixos")
+            rinex_folderpath = os.path.join(station_epoch_path, "RINEX")
+            clock_path = os.path.join(epochpath, "Relogio", "igs")
+            ephem_path = os.path.join(epochpath, "sp3")
+            eop_path = os.path.join(epochpath, "erp")
+            station_param_files_path = os.path.join(epochpath, "fixos")
 
             # list of files in subfolders:
-            rinexfilelist = os.listdir(rinex_path)
+            rinexfilelist = os.listdir(rinex_folderpath)
             eop_filelist = os.listdir(eop_path)
             clock_filelist = os.listdir(clock_path)
             ephem_filelist = os.listdir(ephem_path)
@@ -187,17 +198,21 @@ with open("app_calls.txt", "w+") as calls_file:
             )
 
             blq_filepath = compose_path_selecting_bykey(
-                station_param_files_path, station_param_files_list, "blq"
+                station_epoch_path, station_epoch_path_list, "blq"
             )
 
-            rcv_ant_filename = station.lower() + ".atx"
-            rcv_ant_path = os.path.join(station_param_files_path, rcv_ant_filename)
+            rcv_ant_path = compose_path_selecting_bykey(
+                station_epoch_path, station_epoch_path_list, "atx"
+            )
 
-            if not os.path.exists(rcv_ant_path):
-                rcv_ant_filename = station.upper() + ".atx"
-                rcv_ant_path = os.path.join(station_param_files_path, rcv_ant_filename)
+            # rcv_ant_filename = station.lower() + ".atx"
+            # rcv_ant_path = os.path.join(station_param_files_path, rcv_ant_filename)
 
-            sat_ant_path = os.path.join(station_param_files_path, satant_filename)
+            # if not os.path.exists(rcv_ant_path):
+            #     rcv_ant_filename = station.upper() + ".atx"
+            #     rcv_ant_path = os.path.join(station_param_files_path, rcv_ant_filename)
+
+            sat_ant_path = os.path.join(rootpath_data, satant_filename)
 
             bystation_filestocheck = [
                 dcb_file_path,
@@ -205,94 +220,109 @@ with open("app_calls.txt", "w+") as calls_file:
                 rcv_ant_path,
                 sat_ant_path,
             ]
+
             check_listofpaths(bystation_filestocheck)
 
-            for rinexfilename in rinexfilelist:
-                if "corr2" in rinexfilename:
-                    if not ".pos" in rinexfilename:
-                        for option in custom_op_modes:
+            for rinexfilename in tqdm(rinexfilelist):
+                # if "corr2" in rinexfilename:
+                if not rinexfilename.endswith("d"):
+                    continue
 
-                            rinex_basename = rinexfilename.split("corr2")[0]
+                if not ".pos" in rinexfilename:
+                    for option in custom_op_modes:
 
-                            rinex_ext_base = rinexfilename.split(".")[1][0:-1]
+                        rinex_basename = rinexfilename.split(".")[0]
 
-                            rinex_uni_base = rinex_basename + "." + rinex_ext_base
+                        rinex_ext_base = rinexfilename.split(".")[1][0:-1]
 
-                            # os.path.join(station_epoch_path,)
+                        rinex_uni_base = rinex_basename + "." + rinex_ext_base
 
-                            rinex_file_path = os.path.join(rinex_path, rinexfilename)
-                            print(rinex_file_path, " - ", option)
+                        # os.path.join(station_epoch_path,)
 
-                            rinex_date = get_rinex_date(rinex_file_path)
+                        # rinex_file_path = os.path.join(rinex_folderpath, rinexfilename)
+                        rinex_file_path = os.path.join(
+                            rinex_folderpath, rinex_uni_base + "d"
+                        )
+                        print(rinex_file_path, " - ", option)
 
-                            rinex_gpsweek, rinex_dayofweek = date2gpswd(rinex_date)
+                        rinex_date = get_rinex_date(rinex_file_path)
 
-                            rinex_gpsweek = str(rinex_gpsweek)
-                            rinex_dayofweek = str(rinex_dayofweek)
+                        rinex_gpsweek, rinex_dayofweek = date2gpswd(rinex_date)
 
-                            rinex_composed_gpsday = (
-                                rinex_gpsweek + rinex_dayofweek
-                            )  # also known as "GPS Week Number"
+                        rinex_gpsweek = str(rinex_gpsweek)
+                        rinex_dayofweek = str(rinex_dayofweek)
 
-                            eop_filepath = compose_path_selecting_bykey(
-                                eop_path, eop_filelist, rinex_gpsweek
-                            )
+                        rinex_composed_gpsday = (
+                            rinex_gpsweek + rinex_dayofweek
+                        )  # also known as "GPS Week Number"
 
-                            # generating configuration file
-                            configuration_path = os.path.join(
-                                configurations_outpath,
-                                rinex_basename + "_" + option + ".conf",
-                            )
+                        eop_filepath = compose_path_selecting_bykey(
+                            eop_path, eop_filelist, rinex_gpsweek
+                        )
 
-                            outpath_delays = os.path.join(
-                                specific_outdirpaths[option],
-                                rinex_basename + "_atrasos.txt",
-                            )
+                        # generating configuration file
+                        configuration_path = os.path.join(
+                            configurations_outpath,
+                            rinex_basename + "_" + option + ".conf",
+                        )
 
-                            create_conf_file(
-                                eop_filepath,
-                                configuration_path,
-                                custom_op_modes[option],
-                            )
+                        outpath_delays = os.path.join(
+                            specific_outdirpaths[option],
+                            rinex_basename + "_atrasos.txt",
+                        )
 
-                            rinex_n_path = os.path.join(
-                                rinex_path, rinex_uni_base + "n"
-                            )
+                        create_conf_file(
+                            eop_filepath,
+                            configuration_path,
+                            custom_op_modes[option],
+                        )
 
-                            rinex_g_path = os.path.join(
-                                rinex_path, rinex_uni_base + "g"
-                            )
+                        rinex_n_path = os.path.join(
+                            rinex_folderpath, rinex_uni_base + "n"
+                        )
 
-                            outpath = os.path.join(
-                                specific_outdirpaths[option],
-                                rinex_basename + "_res.pos",
-                            )
+                        rinex_g_path = os.path.join(
+                            rinex_folderpath, rinex_uni_base + "g"
+                        )
 
-                            igs_filename = f"igs{rinex_composed_gpsday}.sp3"
-                            sp3_igs_path = os.path.join(ephem_path, igs_filename)
+                        outfolderpath = os.path.join(
+                            proc_sc_root[proc_scenario], epoch, station
+                        )
 
-                            igl_filename = f"igl{rinex_composed_gpsday}.sp3"
-                            sp3_igl_path = os.path.join(ephem_path, igl_filename)
+                        create_dir_ifnotexists(outfolderpath)
 
-                            clk_path = compose_path_selecting_bykey(
-                                clock_path, clock_filelist, rinex_composed_gpsday
-                            )
+                        outpath = os.path.join(
+                            outfolderpath,
+                            rinex_basename + "_res.pos",
+                        )
 
-                            by_rinex_paths_to_check = [
-                                rinex_n_path,
-                                rinex_g_path,
-                                sp3_igl_path,
-                                sp3_igs_path,
-                                eop_filepath,
-                                rinex_file_path,
-                                clk_path,
-                                configuration_path,
-                            ]
-                            check_listofpaths(by_rinex_paths_to_check)
+                        igs_filename = f"igs{rinex_composed_gpsday}.sp3.Z"
+                        sp3_igs_path = os.path.join(ephem_path, igs_filename)
 
-                            app_call = f"{rnx2rtkp_path} -k {configuration_path} -o {outpath} {rinex_file_path} {rinex_n_path} {rinex_g_path} {sp3_igs_path} {sp3_igl_path} {clk_path} {blq_filepath} {sat_ant_path} {rcv_ant_path} {dcb_file_path}"
+                        igl_filename = f"igl{rinex_composed_gpsday}.sp3.Z"
+                        sp3_igl_path = os.path.join(ephem_path, igl_filename)
 
-                            # calls_file.write(app_call+'\n')
-                            calls_file.write(f"{outpath_delays},{app_call}\n")
+                        clk_path = compose_path_selecting_bykey(
+                            clock_path, clock_filelist, rinex_composed_gpsday
+                        )
 
-                            # end
+                        by_rinex_folderpaths_to_check = [
+                            rinex_n_path,
+                            rinex_g_path,
+                            sp3_igl_path,
+                            sp3_igs_path,
+                            eop_filepath,
+                            rinex_file_path,
+                            clk_path,
+                            configuration_path,
+                        ]
+                        check_listofpaths(by_rinex_folderpaths_to_check)
+
+                        app_call = f"{rnx2rtkp_path} -k {configuration_path} -o {outpath} {rinex_file_path} {rinex_n_path} {rinex_g_path} {sp3_igs_path} {sp3_igl_path} {clk_path} {blq_filepath} {sat_ant_path} {rcv_ant_path} {dcb_file_path}"
+
+                        # calls_file.write(app_call+'\n')
+                        calls_file.write(f"{outpath_delays},{app_call}\n")
+
+                        calls_file.flush()
+
+                        # end

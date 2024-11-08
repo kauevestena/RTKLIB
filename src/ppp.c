@@ -963,20 +963,20 @@ static void satantpcv(const double *rs, const double *rr, const pcv_t *pcv,
 
 double calculate_mjd(gtime_t time)
 {
-    const double reference_mjd = 51544.5; // MJD for 2000-01-01 12:00:00 TT
+    const double reference_mjd = 51544.5; /*  MJD for 2000-01-01 12:00:00 TT  */
     const double seconds_in_day = 86400.0;
 
-    // Convert GPS time to UTC time
+    /* Convert GPS time to UTC time */
     gtime_t utc_time = gpst2utc(time);
 
-    // Reference epoch: 2000-01-01 12:00:00 TT
+    /* Reference epoch: 2000-01-01 12:00:00 TT */
     int ep[6] = {2000, 1, 1, 12, 0, 0};
     gtime_t ref_epoch = epoch2time(ep);
 
-    // Calculate time difference in seconds
+    /* Calculate time difference in seconds */
     double time_difference = timediff(utc_time, ref_epoch);
 
-    // Calculate MJD
+    /* Calculate MJD */
     double mjd = reference_mjd + time_difference / seconds_in_day;
 
     return mjd;
@@ -1363,7 +1363,7 @@ static int res_ppp(int iter, const obsd_t *obs, int n, const double *rs,
             else
                 rtk->ssat[sat - 1].resp[0] = v[nv];
 
-                /* test innovation */
+            /* test innovation */
 #if 0
             if (opt->maxinno>0.0&&fabs(v[nv])>opt->maxinno) {
 #else

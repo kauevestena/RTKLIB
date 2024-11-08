@@ -7,7 +7,28 @@ from tqdm import tqdm
 from astropy.time import Time
 
 
-rootpath = "/mnt/c/Users/kaue/ufpr.br/Lais Thuany Cardoso Theodoro - VMF3"
+rootpath_data = "/mnt/c/Users/kaue/ufpr.br/Lais Thuany Cardoso Theodoro - VMF3"
+
+outputs_path = os.path.join(rootpath_data, "saidas")
+
+proc_sc_root = {
+    "orig": os.path.join(outputs_path, "orig"),
+    "mod_vmf3": os.path.join(outputs_path, "mod_vmf3"),
+    "mod_vmf3_grads": os.path.join(outputs_path, "mod_vmf3_grads"),
+    "mod_vmf3_ztd_orig": os.path.join(outputs_path, "mod_vmf3_ztd_orig"),
+}
+
+exec_paths = {
+    "mod": "/home/RTKLIB/app/rnx2rtkp/gcc/rnx2rtkp",
+    "orig": "/home/RTKLIB/rtklib_orig/RTKLIB/app/rnx2rtkp/gcc/rnx2rtkp",
+}
+
+proc_sc_execs = {
+    "orig": exec_paths["orig"],
+    "mod_vmf3": exec_paths["mod"],
+    "mod_vmf3_grads": exec_paths["mod"],
+    "mod_vmf3_ztd_orig": exec_paths["mod"],
+}
 
 # from vmf3 import *
 
