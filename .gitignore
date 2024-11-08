@@ -177,3 +177,5 @@ scripts/tests.py
 data
 tests.py
 app_calls.txt
+curr_delaypath.txt
+curr_station_name.txt

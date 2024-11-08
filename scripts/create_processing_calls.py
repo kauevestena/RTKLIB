@@ -153,7 +153,7 @@ file-eopfile       ={eop_filepath} """
 
 
 # doing the processing stuff
-with open("app_calls.txt", "w+", encoding="utf-8") as calls_file:
+with open(calls_path, "w+", encoding="utf-8") as calls_file:
     for epoch in tqdm(epochs):
         epochpath = os.path.join(basepath, epoch)
 

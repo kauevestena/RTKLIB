@@ -6,6 +6,7 @@ from io import StringIO
 from tqdm import tqdm
 from astropy.time import Time
 
+calls_path = "app_calls.txt"
 
 rootpath_data = "/mnt/c/Users/kaue/ufpr.br/Lais Thuany Cardoso Theodoro - VMF3"
 
@@ -119,6 +120,11 @@ def ajustar_longitude(lon):
     if lon < 0:
         lon += 360
     return lon
+
+
+def remove_file_if_exists(filepath):
+    if os.path.exists(filepath):
+        os.remove(filepath)
 
 
 # Função para baixar o arquivo de uma URL
