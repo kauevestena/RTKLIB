@@ -1,3 +1,7 @@
+import sys
+
+sys.path.append("scripts")
+
 from lib import *
 
 for e in ["INVERNO", "VERAO"]:
@@ -7,5 +11,5 @@ for e in ["INVERNO", "VERAO"]:
             if "cargas" in filename:
                 filepath = os.path.join(rbmc_path, station, filename)
                 print(filepath)
-                if filepath.endswith(".txt"):
-                    os.rename(filepath, filepath.replace(".txt", ".blq"))
+                # if filepath.endswith(".txt"):
+                os.rename(filepath, filepath.replace(" ", "_"))

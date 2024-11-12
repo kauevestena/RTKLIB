@@ -10,7 +10,7 @@ curr_station_path_store = "curr_station_name.txt"
 
 
 with open(calls_path) as calls_file:
-    for entry in tqdm(calls_file):
+    for entry in tqdm(calls_file, total=621):
 
         curr_delay_filepath, call = entry.strip("\n").split(",")
 

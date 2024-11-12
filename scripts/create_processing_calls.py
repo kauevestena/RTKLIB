@@ -83,10 +83,11 @@ pos1-elmask        =7         # (deg)
 pos1-dynamics      =off        # (0:off,1:on)
 pos1-tidecorr      =on        # (0:off,1:on)
 pos1-ionoopt       =dual-freq       # (0:off,1:brdc,2:sbas,3:dual-freq,4:est-stec)
-pos1-tropopt       ={ztd_mode}      # (0:off,1:saas,2:sbas,3:est-ztd,4:est-ztdgrad)
+pos1-tropopt       =est-ztdgrad      # (0:off,1:saas,2:sbas,3:est-ztd,4:est-ztdgrad)
 pos1-sateph        =precise       # (0:brdc,1:precise,2:brdc+sbas,3:brdc+ssrapc,4:brdc+ssrcom)
-pos1-exclsats      =           # (prn ...)
+# pos1-exclsats      =           # (prn ...)
 pos1-navsys        =5          # (1:gps+2:sbas+4:glo+8:gal+16:qzs+32:comp)
+# pos1-debugtrace = 5
 pos2-armode        =off # (0:off,1:continous,2:instantaneous,3:fix-and-hold,4:ppp-ar)
 pos2-arthres       =3
 pos2-arlockcnt     =10
@@ -104,7 +105,7 @@ out-timesys        =gpst       # (0:gpst,1:utc,2:jst)
 out-timeform       =hms        # (0:tow,1:hms)
 out-timendec       =3
 out-degform        =dms        # (0:deg,1:dms)
-out-fieldsep       =
+# out-fieldsep       =
 out-height         =ellipsoidal # (0:ellipsoidal,1:geodetic)
 out-geoid          =internal   # (0:internal,1:egm96,2:egm08_2.5,3:egm08_1,4:gsi2000)
 #out-solstatic      =all        # (0:all,1:single)
@@ -296,10 +297,10 @@ with open(calls_path, "w+", encoding="utf-8") as calls_file:
                             rinex_basename + "_res.pos",
                         )
 
-                        igs_filename = f"igs{rinex_composed_gpsday}.sp3.Z"
+                        igs_filename = f"igs{rinex_composed_gpsday}.sp3"
                         sp3_igs_path = os.path.join(ephem_path, igs_filename)
 
-                        igl_filename = f"igl{rinex_composed_gpsday}.sp3.Z"
+                        igl_filename = f"igl{rinex_composed_gpsday}.sp3"
                         sp3_igl_path = os.path.join(ephem_path, igl_filename)
 
                         clk_path = compose_path_selecting_bykey(
@@ -318,7 +319,7 @@ with open(calls_path, "w+", encoding="utf-8") as calls_file:
                         ]
                         check_listofpaths(by_rinex_folderpaths_to_check)
 
-                        app_call = f"{rnx2rtkp_path} -k {configuration_path} -o {outpath} {rinex_file_path} {rinex_n_path} {rinex_g_path} {sp3_igs_path} {sp3_igl_path} {clk_path} {blq_filepath} {sat_ant_path} {rcv_ant_path} {dcb_file_path}"
+                        app_call = f'"{rnx2rtkp_path}" -k "{configuration_path}" -o "{outpath}" "{rinex_file_path}" "{rinex_n_path}" "{rinex_g_path}" "{sp3_igs_path}" "{sp3_igl_path}" "{clk_path}" "{blq_filepath}" "{sat_ant_path}" "{rcv_ant_path}" "{dcb_file_path}"'
 
                         # calls_file.write(app_call+'\n')
                         calls_file.write(f"{outpath_delays},{app_call}\n")

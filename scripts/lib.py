@@ -8,7 +8,8 @@ from astropy.time import Time
 
 calls_path = "app_calls.txt"
 
-rootpath_data = "/mnt/c/Users/kaue/ufpr.br/Lais Thuany Cardoso Theodoro - VMF3"
+# don't forget to create the symlink to the VMF3 data!
+rootpath_data = "/home/gnss_data"
 
 outputs_path = os.path.join(rootpath_data, "saidas")
 

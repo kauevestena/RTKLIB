@@ -1,0 +1,1 @@
+ln -s "/mnt/c/Users/kaue/ufpr.br/Lais Thuany Cardoso Theodoro - VMF3" "/home/gnss_data"
