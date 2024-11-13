@@ -13,6 +13,8 @@ rootpath_data = "/home/gnss_data"
 
 outputs_path = os.path.join(rootpath_data, "saidas")
 
+delays_header = "grad_e,grad_n,m_h,m_w_orig,m_w,zhd,zwd,x_0,x_1,x_2,tot_delay"
+
 proc_sc_root = {
     "orig": os.path.join(outputs_path, "orig"),
     "mod_vmf3": os.path.join(outputs_path, "mod_vmf3"),

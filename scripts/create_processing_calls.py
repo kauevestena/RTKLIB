@@ -267,9 +267,16 @@ with open(calls_path, "w+", encoding="utf-8") as calls_file:
                             rinex_basename + "_" + option + ".conf",
                         )
 
+                        outfolderpath_delays = os.path.join(
+                            proc_sc_root[proc_scenario], epoch, station, "delays"
+                        )
+
+                        create_dir_ifnotexists(outfolderpath_delays)
+
                         outpath_delays = os.path.join(
-                            specific_outdirpaths[option],
-                            rinex_basename + "_atrasos.txt",
+                            # specific_outdirpaths[option],
+                            outfolderpath_delays,
+                            rinex_basename + "_delays.txt",
                         )
 
                         create_conf_file(
@@ -287,7 +294,7 @@ with open(calls_path, "w+", encoding="utf-8") as calls_file:
                         )
 
                         outfolderpath = os.path.join(
-                            proc_sc_root[proc_scenario], epoch, station
+                            proc_sc_root[proc_scenario], epoch, station, "pos"
                         )
 
                         create_dir_ifnotexists(outfolderpath)
