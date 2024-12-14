@@ -5,6 +5,7 @@ import pandas as pd
 from io import StringIO
 from tqdm import tqdm
 from astropy.time import Time
+import logging
 
 calls_path = "app_calls.txt"
 
