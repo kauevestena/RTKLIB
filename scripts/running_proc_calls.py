@@ -20,8 +20,8 @@ curr_station_path_store = "curr_station_name.txt"
 with open(calls_path) as calls_file:
     for entry in tqdm(calls_file, total=621):
 
-        if not "inverno" in entry.lower():
-            continue
+        # if not "inverno" in entry.lower():
+        #     continue
 
         curr_delay_filepath, call = entry.strip("\n").split(",")
 
