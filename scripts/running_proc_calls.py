@@ -49,7 +49,7 @@ with open(calls_path) as calls_file:
                 text=True,
             )
 
-            logging.info(result.stdout)
+            # logging.info(result.stdout)
 
         except subprocess.CalledProcessError as e:
             error_details = []
