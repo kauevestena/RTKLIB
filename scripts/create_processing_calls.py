@@ -4,7 +4,7 @@ from lib import *
 from tqdm import tqdm
 
 # TO MODIFY:
-proc_scenario = "orig"
+proc_scenario = "orig_nograd"
 
 ####################################
 
@@ -70,10 +70,10 @@ def compose_path_selecting_bykey(basepath, inputlist, inputkey):
 
 def create_conf_file(eop_filepath, outpath, ztd_default_mode=True):
 
-    ztd_mode = "est-ztd"
+    # ztd_mode = "est-ztd"
 
-    if not ztd_default_mode:
-        ztd_mode = "est-ztdgrad"
+    # if not ztd_default_mode:
+    #     ztd_mode = "est-ztdgrad"
 
     file_as_string = f""" # rtkpost options (2024/12/15 01:33:34, v.2.4.2)
 
@@ -89,7 +89,7 @@ pos1-snrmask_L5    =0,0,0,0,0,0,0,0,0
 pos1-dynamics      =off        # (0:off,1:on)
 pos1-tidecorr      =on          # (0:off,1:on)
 pos1-ionoopt       =dual-freq  # (0:off,1:brdc,2:sbas,3:dual-freq,4:est-stec,5:ionex-tec,6:qzs-brdc,7:qzs-lex,8:vtec_sf,9:vtec_ef,10:gtec)
-pos1-tropopt       =est-ztdgrad # (0:off,1:saas,2:sbas,3:est-ztd,4:est-ztdgrad)
+pos1-tropopt       =est-ztd # (0:off,1:saas,2:sbas,3:est-ztd,4:est-ztdgrad)
 pos1-sateph        =precise    # (0:brdc,1:precise,2:brdc+sbas,3:brdc+ssrapc,4:brdc+ssrcom)
 pos1-posopt1       =on         # (0:off,1:on)
 pos1-posopt2       =on         # (0:off,1:on)
@@ -240,7 +240,7 @@ with open(calls_path, "w+", encoding="utf-8") as calls_file:
 
             for rinexfilename in tqdm(rinexfilelist):
                 # if "corr2" in rinexfilename:
-                if not rinexfilename.endswith("d"):
+                if not rinexfilename.endswith("o"):
                     continue
 
                 if not ".pos" in rinexfilename:
@@ -256,7 +256,7 @@ with open(calls_path, "w+", encoding="utf-8") as calls_file:
 
                         # rinex_file_path = os.path.join(rinex_folderpath, rinexfilename)
                         rinex_file_path = os.path.join(
-                            rinex_folderpath, rinex_uni_base + "d"
+                            rinex_folderpath, rinex_uni_base + "o"
                         )
                         print(rinex_file_path, " - ", option)
 
@@ -282,7 +282,10 @@ with open(calls_path, "w+", encoding="utf-8") as calls_file:
                         )
 
                         outfolderpath_delays = os.path.join(
-                            proc_sc_root[proc_scenario], epoch, station, "delays"
+                            proc_sc_root[proc_scenario],
+                            epoch,
+                            station,
+                            "delays",
                         )
 
                         create_dir_ifnotexists(outfolderpath_delays)
