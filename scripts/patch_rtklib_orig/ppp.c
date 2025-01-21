@@ -953,9 +953,9 @@ if ((opt->tropopt == TROPOPT_ESTG || opt->tropopt == TROPOPT_CORG) && azel[1] > 
 
     /* Write data to the file */
     /* grad_e,grad_n,m_h,m_w_orig,m_w,zhd,zwd,x_0,x_1,x_2,tot_delay */
-    if (fprintf(fout, "%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f\n",
+    if (fprintf(fout, "%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%li,%f\n",
                 grad_e, grad_n, m_h, m_w_orig, m_w, zhd, x[0] - zhd,
-                x[0], x[1], x[2], final_delay) < 0)
+                x[0], x[1], x[2], final_delay,time.time,time.sec) < 0)
     {
         fprintf(stderr, "Error writing to output file\n");
         return -1; /* Handle error appropriately */
