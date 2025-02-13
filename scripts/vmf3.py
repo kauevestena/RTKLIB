@@ -5226,15 +5226,15 @@ def tropospheric_correction_vmf3(
     gn_h = dmfhde * cos(az) + dm2fhde2 * cos2az
     gn_w = dmfwde * cos(az) + dm2fwde2 * cos2az
 
-    logging.info(
-        f"""
-    	v1	c1	c2
-    ge_h	{ge_h_orig}	{ge_h}	{ge_h*mfh}	
-    ge_w	{ge_w_orig}	{ge_w}	{ge_w*mfw}	
-    gn_h	{gn_h_orig}	{gn_h}	{gn_h*mfh}	
-    gn_w	{gn_w_orig}	{gn_w}	{gn_w*mfw}	
-                 """
-    )
+    # logging.info(
+    #     f"""
+    # 	v1	c1	c2
+    # ge_h	{ge_h_orig}	{ge_h}	{ge_h*mfh}
+    # ge_w	{ge_w_orig}	{ge_w}	{ge_w*mfw}
+    # gn_h	{gn_h_orig}	{gn_h}	{gn_h*mfh}
+    # gn_w	{gn_w_orig}	{gn_w}	{gn_w*mfw}
+    #              """
+    # )
 
     # tropospheric correction:
     # m_h_vmf * zhd + m_w_vmf * (x[0] - zhd)
@@ -5297,6 +5297,12 @@ parser.add_argument("--zd", type=float, help="zenith distance (radians)", requir
 parser.add_argument(
     "--az", type=float, help="satelllite azimuth (radians)", required=True
 )
+parser.add_argument(
+    "--zhd", type=float, help="zenith hydrostatic delay (m)", required=True
+)
+parser.add_argument("--zwd", type=float, help="zenith wet delay (m)", required=True)
+parser.add_argument("--time", type=float, help="time epoch in seconds", required=True)
+
 # parser.add_argument("--outpath", type=str, help="output path", required=True)
 
 
@@ -5311,26 +5317,46 @@ def main():
         args.ah, args.aw, args.mjd, args.lat, args.lon, args.h_ell, args.zd
     )
 
-    trop_corr = tropospheric_correction_vmf3(
-        mfh=mfh,
-        mfw=mfw,
-        ah=ah,
-        aw=aw,
-        bh=bh,
-        bw=bw,
-        ch=ch,
-        cw=cw,
-        el=el,
-        az=args.az,
-        zhd=args.h_ell,
-        zwd=args.zd,
-        gn_h=args.gn_h,
-        ge_h=args.ge_h,
-        gn_w=args.gn_w,
-        ge_w=args.ge_w,
+    zhd = args.zhd
+    zwd = args.zwd
+    gn_h = (args.gn_h,)
+    ge_h = (args.ge_h,)
+    gn_w = (args.gn_w,)
+    ge_w = (args.ge_w,)
+
+    trop_corr_orig = (
+        mfh * zhd
+        + mfw * zwd
+        + mfh * (args.gn_h * cos(args.az) + args.ge_h * sin(args.az))
+        + mfw * (args.gn_w * cos(args.az) + args.ge_w * sin(args.az))
     )
 
+    # trop_corr_mod = tropospheric_correction_vmf3(
+    #     mfh=mfh,
+    #     mfw=mfw,
+    #     ah=ah,
+    #     aw=aw,
+    #     bh=bh,
+    #     bw=bw,
+    #     ch=ch,
+    #     cw=cw,
+    #     el=el,
+    #     az=args.az,
+    #     zhd=zhd,
+    #     zwd=zwd,
+    #     gn_h=gn_h,
+    #     ge_h=ge_h,
+    #     gn_w=gn_w,
+    #     ge_w=ge_w,
+    # )
+
+    trop_corr = trop_corr_orig
+
     print(f"{trop_corr:.10f}")
+
+    with open(os.environ["CURRENT_DELAYPATH"], "a") as f:
+        # grad_e,grad_n,m_h,m_w_orig,m_w,zhd,zwd,x_0,x_1,x_2,tot_delay,epoch_s
+        f.write(f"{ge_h+ge_w:.3f},{gn_h+gn_w:.3f},{mfh:.3f},{mfw:.3f},{trop_corr:5f}\n")
 
 
 if __name__ == "__main__":

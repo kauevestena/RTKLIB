@@ -1,10 +1,11 @@
 import os, subprocess, glob, datetime
 from gnsscal import date2gpswd
-from lib import *
 from tqdm import tqdm
 
-# TO MODIFY:
-proc_scenario = "orig_nograd"
+try:
+    from scripts.lib import *
+except ImportError:
+    from lib import *
 
 ####################################
 

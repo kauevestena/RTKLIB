@@ -1,3 +1,8 @@
+import sys
+
+sys.path.append(".")
+sys.path.append("scripts")
+
 import requests
 import numpy as np
 import calendar, os
@@ -6,6 +11,12 @@ from io import StringIO
 from tqdm import tqdm
 from astropy.time import Time
 import logging
+
+
+# TO MODIFY:
+proc_scenario = "orig_nograd"
+
+# other constants:
 
 calls_path = "app_calls.txt"
 
@@ -19,9 +30,9 @@ delays_header = "grad_e,grad_n,m_h,m_w_orig,m_w,zhd,zwd,x_0,x_1,x_2,tot_delay"
 proc_sc_root = {
     "orig": os.path.join(outputs_path, "orig"),
     "orig_nograd": os.path.join(outputs_path, "orig_nograd"),
-    "mod_vmf3": os.path.join(outputs_path, "mod_vmf3"),
+    "vmf3_grads": os.path.join(outputs_path, "vmf3_grads"),
     "mod_vmf3_grads": os.path.join(outputs_path, "mod_vmf3_grads"),
-    "mod_vmf3_ztd_orig": os.path.join(outputs_path, "mod_vmf3_ztd_orig"),
+    # "mod_vmf3_ztd_orig": os.path.join(outputs_path, "mod_vmf3_ztd_orig"),
 }
 
 exec_paths = {
@@ -32,9 +43,9 @@ exec_paths = {
 proc_sc_execs = {
     "orig": exec_paths["orig"],
     "orig_nograd": exec_paths["orig"],
-    "mod_vmf3": exec_paths["mod"],
+    "vmf3_grads": exec_paths["mod"],
     "mod_vmf3_grads": exec_paths["mod"],
-    "mod_vmf3_ztd_orig": exec_paths["mod"],
+    # "mod_vmf3_ztd_orig": exec_paths["mod"],
 }
 
 # from vmf3 import *
