@@ -1,11 +1,18 @@
+import sys
+
+sys.path.append("/home/RTKLIB/scripts")
+
+from interpolate_ah import *
+
 import numpy as np
-import argparse
-from math import sin, cos, sqrt, tan
+import argparse, os
+from math import sin, cos
+
 import logging
 
 logging.basicConfig(
     level=logging.DEBUG,
-    filename="vmf_processing.log",
+    filename="/home/RTKLIB/scripts/logs/vmf_processing.log",
     format="%(asctime)s - %(levelname)s - %(message)s",
     datefmt="%d-%b-%y %H:%M:%S",
     filemode="w",
@@ -5103,15 +5110,13 @@ def vmf3_ht(mjd=None, lat=None, lon=None, h_ell=None, zd=None, ah=None, aw=None)
     return mfh, mfw, ah, aw, bh, bw, ch, cw, el
 
 
-def dm_de(a, b, c, el):
+def dm_de(a, b, c, cos_el, sin_el):
     """
     from wolfram alpha:
     -(cos(z) - (a (cos(z) - (b cos(z))/(c + sin(z))^2))/(sin(z) + b/(c + sin(z)))^2)/(sin(z) + a/(sin(z) + b/(c + sin(z))))^2
 
     """
 
-    cos_el = cos(el)
-    sin_el = sin(el)
     temp1 = c + sin_el
     temp2 = sin_el + b / temp1
     temp3 = sin_el + a / temp2
@@ -5124,15 +5129,10 @@ def dm_de(a, b, c, el):
     temp8 = temp6 / temp7
     numerator = -(cos_el - temp8)
 
-    result = numerator / denominator
-    return result
+    return numerator / denominator
 
 
-def d2m_de2(a, b, c, el):
-    # Compute basic trigonometric functions
-    cos_el = cos(el)
-    sin_el = sin(el)
-
+def d2m_de2(a, b, c, cos_el, sin_el, el):
     # Compute intermediate variables for the first derivative (func)
     temp1 = c + sin_el
     temp2 = sin_el + b / temp1
@@ -5197,14 +5197,16 @@ def d2m_de2(a, b, c, el):
     return func2_value
 
 
-def tropospheric_correction_vmf3(
+def modified_tropospheric_correction_vmf3(
     mfh, mfw, ah, aw, bh, bw, ch, cw, el, az, zhd, zwd, gn_h, ge_h, gn_w, ge_w
 ):
+    cos_el = cos(el)
+    sin_el = sin(el)
 
     # # the mapping functions derivatives:
     # first order derivative:
-    dmfhde = dm_de(ah, bh, ch, el)
-    dmfwde = dm_de(aw, bw, cw, el)
+    dmfhde = dm_de(ah, bh, ch, cos_el, sin_el)
+    dmfwde = dm_de(aw, bw, cw, cos_el, sin_el)
 
     # re-computing gn and ge:
     ge_h_orig = ge_h
@@ -5214,17 +5216,17 @@ def tropospheric_correction_vmf3(
     gn_w_orig = gn_w
 
     # second order derivative:
-    dm2fhde2 = d2m_de2(ah, bh, ch, el)
-    dm2fwde2 = d2m_de2(aw, bw, cw, el)
+    dm2fhde2 = d2m_de2(ah, bh, ch, cos_el, sin_el, el)
+    dm2fwde2 = d2m_de2(aw, bw, cw, cos_el, sin_el, el)
 
-    cos2az = (cos(az) ** 2) / 2
-    sin2az = (sin(az) ** 2) / 2
+    cos2az = (cos_az**2) / 2
+    sin2az = (sin_az**2) / 2
 
-    ge_h = dmfhde * sin(az) + dm2fhde2 * sin2az
-    ge_w = dmfwde * sin(az) + dm2fwde2 * sin2az
+    ge_h = dmfhde * sin_az + dm2fhde2 * sin2az
+    ge_w = dmfwde * sin_az + dm2fwde2 * sin2az
 
-    gn_h = dmfhde * cos(az) + dm2fhde2 * cos2az
-    gn_w = dmfwde * cos(az) + dm2fwde2 * cos2az
+    gn_h = dmfhde * cos_az + dm2fhde2 * cos2az
+    gn_w = dmfwde * cos_az + dm2fwde2 * cos2az
 
     # logging.info(
     #     f"""
@@ -5242,8 +5244,8 @@ def tropospheric_correction_vmf3(
 
     corr_w_p1 = mfw * zwd
 
-    gnh_mult = gn_h * cos(az) + ge_h * sin(az)
-    gnw_mult = gn_w * cos(az) + ge_w * sin(az)
+    gnh_mult = gn_h * cos_az + ge_h * sin_az
+    gnw_mult = gn_w * cos_az + ge_w * sin_az
 
     corr_h_p2 = dmfhde * gnh_mult
 
@@ -5281,55 +5283,86 @@ parser = argparse.ArgumentParser()
 # grad_n = m_w * cotz * cos(azel[0]);
 # grad_e = m_w * cotz * sin(azel[0]);
 
-parser.add_argument(
-    "--ah", type=float, help="hydrostatic mf coefficient a", required=True
-)
-parser.add_argument("--aw", type=float, help="wet mf coefficient a", required=True)
+# parser.add_argument(
+#     "--ah", type=float, help="hydrostatic mf coefficient a", required=True
+# )
+# parser.add_argument("--aw", type=float, help="wet mf coefficient a", required=True)
 parser.add_argument("--mjd", type=float, help="modified Julian date", required=True)
-parser.add_argument("--lat", type=float, help="latitude (radians)", required=True)
-parser.add_argument("--lon", type=float, help="longitude (radians)", required=True)
-parser.add_argument("--gn_h", type=float, help="GN H", required=True)
-parser.add_argument("--gn_w", type=float, help="GN W", required=True)
-parser.add_argument("--ge_h", type=float, help="GE H", required=True)
-parser.add_argument("--ge_w", type=float, help="GE W", required=True)
-parser.add_argument("--h_ell", type=float, help="ellipsoidal height (m)", required=True)
-parser.add_argument("--zd", type=float, help="zenith distance (radians)", required=True)
+# parser.add_argument("--lat", type=float, help="latitude (radians)", required=True)
+# parser.add_argument("--lon", type=float, help="longitude (radians)", required=True)
+# parser.add_argument("--gn_h", type=float, help="GN H", required=True)
+# parser.add_argument("--gn_w", type=float, help="GN W", required=True)
+# parser.add_argument("--ge_h", type=float, help="GE H", required=True)
+# parser.add_argument("--ge_w", type=float, help="GE W", required=True)
+# parser.add_argument("--h_ell", type=float, help="ellipsoidal height (m)", required=True)
+parser.add_argument(
+    "--zd", type=float, help="satellite zenith distance (radians)", required=True
+)
 parser.add_argument(
     "--az", type=float, help="satelllite azimuth (radians)", required=True
 )
-parser.add_argument(
-    "--zhd", type=float, help="zenith hydrostatic delay (m)", required=True
-)
-parser.add_argument("--zwd", type=float, help="zenith wet delay (m)", required=True)
-parser.add_argument("--time", type=float, help="time epoch in seconds", required=True)
+# parser.add_argument(
+#     "--zhd", type=float, help="zenith hydrostatic delay (m)", required=True
+# )
+# parser.add_argument("--zwd", type=float, help="zenith wet delay (m)", required=True)
+# parser.add_argument("--time", type=float, help="time epoch in seconds", required=True)
 
 # parser.add_argument("--outpath", type=str, help="output path", required=True)
 
+# parser.add_argument("--station", type=str, help="station name", required=True)
+parser.add_argument(
+    "--time_seconds", type=float, help="GPS time in seconds", required=True
+)
+
 
 args = parser.parse_args()
+
+az = args.az
+
+# zhd = args.zhd
+# zwd = args.zwd
+# gn_h = args.gn_h
+# ge_h = args.ge_h
+# gn_w = args.gn_w
+# ge_w = args.ge_w
+
+cos_az = cos(az)
+sin_az = sin(az)
+
+# station = args.station.upper()
+
+station = os.environ["CURRENT_STATION"]
+time = float(args.time_seconds)
 
 # argument list:
 # ah, aw, mjd, lat, lon, h_ell, zd, az, gn_h, ge_h, gn_w, ge_w
 
 
 def main():
+    ah_params = interpolate_ah(station, time)
+
+    ah = ah_params["ah"]
+    aw = ah_params["aw"]
+    gn_h = ah_params["gn_h"]
+    ge_h = ah_params["ge_h"]
+    gn_w = ah_params["gn_w"]
+    ge_w = ah_params["ge_w"]
+
+    zhd = ah_params["zhd"]
+    zwd = ah_params["zwd"]
+
+    lat = ah_params["lat"]
+    lon = ah_params["lon"]
+    h_ell = ah_params["alt"]
+
     mfh, mfw, ah, aw, bh, bw, ch, cw, el = vmf3_ht(
-        args.ah, args.aw, args.mjd, args.lat, args.lon, args.h_ell, args.zd
+        ah, aw, args.mjd, lat, lon, h_ell, args.zd
     )
 
-    zhd = args.zhd
-    zwd = args.zwd
-    gn_h = (args.gn_h,)
-    ge_h = (args.ge_h,)
-    gn_w = (args.gn_w,)
-    ge_w = (args.ge_w,)
+    mfw_grads = mfw * (gn_w * cos_az + ge_w * sin_az)
+    mfh_grads = mfh * (gn_h * cos_az + ge_h * sin_az)
 
-    trop_corr_orig = (
-        mfh * zhd
-        + mfw * zwd
-        + mfh * (args.gn_h * cos(args.az) + args.ge_h * sin(args.az))
-        + mfw * (args.gn_w * cos(args.az) + args.ge_w * sin(args.az))
-    )
+    trop_corr_orig = mfh * zhd + mfw * zwd + mfh_grads + mfw_grads
 
     # trop_corr_mod = tropospheric_correction_vmf3(
     #     mfh=mfh,
@@ -5352,11 +5385,36 @@ def main():
 
     trop_corr = trop_corr_orig
 
-    print(f"{trop_corr:.10f}")
-
     with open(os.environ["CURRENT_DELAYPATH"], "a") as f:
         # grad_e,grad_n,m_h,m_w_orig,m_w,zhd,zwd,x_0,x_1,x_2,tot_delay,epoch_s
-        f.write(f"{ge_h+ge_w:.3f},{gn_h+gn_w:.3f},{mfh:.3f},{mfw:.3f},{trop_corr:5f}\n")
+
+        # grad_e :      {ge_h+ge_w:.6f}
+        # grad_n :      {gn_h+gn_w:.6f}
+        # m_h :         {mfh:.6f}
+        # m_w_orig :    {mfw:.6f}
+        # m_w :         {mfw_grads:.6f}
+        # zhd :         {zhd:.6f}
+        # zwd :         {zwd:.6f}
+        # x_0 :         0
+        # x_1 :         0
+        # x_2 :         0
+        # tot_delay :   {trop_corr:5f}
+        # epoch_s :     {args.time}
+
+        f.write(
+            f"{ge_h+ge_w:.6f},{gn_h+gn_w:.6f},{mfh:.6f},{mfw:.6f},{mfw_grads:.6f},{zhd:.6f},{zwd:.6f},0,0,0,{trop_corr:5f},{time},\n"
+        )
+
+    with open("/home/RTKLIB/delay_val.txt", "w") as f:
+        f.write(f"{trop_corr:.10f}")
+
+    # print(f"{trop_corr:.10f}")
+
+    # try:
+    #     write_shared_double(trop_corr)
+    #     logging.info(f"recorded to shared memory: {read_shared_double()}")
+    # except Exception as e:
+    #     logging.error(e)
 
 
 if __name__ == "__main__":

@@ -1,31 +1,123 @@
-import sys
+# import sys
+# import os
+# import mmap
+# import struct
 
-sys.path.append(".")
-sys.path.append("scripts")
-from lib import *
-from datetime import datetime
+import os
+
+# import mmap, struct
+
+# import logging
+
+# sys.path.append(".")
+# sys.path.append("scripts")
+from datetime import datetime, timezone
+
 
 # inputs:
 # - station name
 # - GPS time in seconds
 
-import argparse
+# logging.basicConfig(
+#     level=logging.INFO,
+#     filename="/home/RTKLIB/scripts/logs/interpolate_ah.log",
+#     format="%(asctime)s - %(levelname)s - %(message)s",
+#     datefmt="%d-%b-%y %H:%M:%S",
+#     filemode="a",
+# )
+
 
 intervals = [(0, 6), (6, 12), (12, 18), (18, 24)]
 
-parser = argparse.ArgumentParser()
-parser.add_argument("--station", type=str, help="station name", required=True)
-parser.add_argument(
-    "--time_seconds", type=float, help="GPS time in seconds", required=True
-)
-args = parser.parse_args()
+base_folder = "/home/RTKLIB/vmf_grid"
+fileformat = ".ac3"
 
-station = args.station
-time = float(args.time_seconds)
+six_hours_in_seconds = 21600
 
 
-def main():
-    datetime_obs = gps_time_to_utc(time)
+# # Shared memory file
+# SHM_NAME = "/shm_single_double"
+
+# # Define the data format (1 double = 8 bytes)
+# FORMAT = "d"
+# DATA_SIZE = struct.calcsize(FORMAT)  # 8 bytes
+
+
+# def write_shared_double(value):
+#     """Writes a single double value to shared memory."""
+#     # Create and open shared memory object with read/write permission.
+#     fd = os.open(SHM_NAME, os.O_CREAT | os.O_RDWR, 0o666)
+#     os.ftruncate(fd, DATA_SIZE)  # Ensure the size is correct
+#     shm = mmap.mmap(fd, DATA_SIZE, mmap.MAP_SHARED, mmap.PROT_WRITE)
+#     shm.seek(0)
+#     shm.write(struct.pack(FORMAT, value))
+#     shm.close()  # Close the mapping
+#     os.close(fd)  # Close the file descriptor
+
+
+# def read_shared_double(name=SHM_NAME):
+#     """Reads a single double value from shared memory."""
+#     fd = os.open(name, os.O_RDONLY)
+#     shm = mmap.mmap(fd, DATA_SIZE, mmap.MAP_SHARED, mmap.PROT_READ)
+#     shm.seek(0)
+#     data = shm.read(DATA_SIZE)
+#     value = struct.unpack(FORMAT, data)[0]
+#     shm.close()
+#     os.close(fd)
+#     return value
+
+
+def unix_to_utc(unix_seconds):
+    """Convert Unix timestamp (seconds since 1970-01-01) to UTC datetime (timezone-aware)."""
+    return datetime.fromtimestamp(unix_seconds, tz=timezone.utc)
+
+
+def find_interval(hour, intervals):
+    for interval in intervals:
+        if interval[0] <= hour < interval[1]:
+            return interval
+    return None  # In case the hour doesn't match any interval
+
+
+def parse_data_file(file_path):
+    result = {}
+
+    with open(file_path, "r") as file:
+        # Read the first line (Station, Date, Time info)
+        header_line = file.readline().strip()
+        station, year, month, day, hour, minute = header_line.split()
+
+        # Store the station and time info
+        result["station"] = station
+        result["date"] = f"{year}-{month}-{day}"
+        result["time"] = f"{hour}:{minute}"
+
+        # Read the second line (column headers)
+        headers = file.readline().strip().lower().split()
+
+        # Read the third line (values)
+        values = file.readline().strip().split()
+
+        # Combine headers and values into a dictionary
+        data_dict = {headers[i]: float(values[i]) for i in range(len(headers))}
+
+        # Add the data dictionary to the result
+        result["data"] = data_dict
+
+    return result
+
+
+# # # # Define a handler for the SIGPIPE signal
+# # # def sigpipe_handler(signum, frame):
+# # #     sys.stderr.write("Broken pipe error occurred.\n")
+# # #     sys.exit(1)
+
+
+def interpolate_ah(station, time):
+
+    station = station.upper()
+
+    datetime_obs = unix_to_utc(time)
 
     year = datetime_obs.year
     month = datetime_obs.month
@@ -38,11 +130,18 @@ def main():
     begin, end = find_interval(hour, intervals)
 
     # time since the beginning of the interval:
-    dt_begin = datetime_obs - datetime(year, month, day, begin, 0, 0)
+    dt_begin = datetime_obs - datetime(
+        year, month, day, begin, 0, 0, tzinfo=timezone.utc
+    )
 
     # path for the file at beginning of interval
     path_begin = os.path.join(
-        base_folder, station, str(year), str(month), str(day), str(begin) + fileformat
+        base_folder,
+        station,
+        str(year),
+        str(month),
+        str(day),
+        str(begin) + fileformat,
     )
 
     end_hour = end
@@ -114,11 +213,16 @@ def main():
             dt_begin.total_seconds() / six_hours_in_seconds
         )
 
-    # print all values in the final_data dictionary, in the same line, with 10 decimal places:
-    final_data_str = ", ".join([f"{value:.10f}" for value in final_data.values()])
-    print(final_data_str)
-    print(final_data.keys())
+    # # print all values in the final_data dictionary, in the same line, with 10 decimal places:
+    # final_data_str = " ".join([f"{value:.10f}" for value in final_data.values()])
+
+    # # logging.info(final_data_str)
+
+    # print(final_data_str)
+
+    return final_data
 
 
-if __name__ == "__main__":
-    main()
+# if __name__ == "__main__":
+#     for i in tqdm(range(100000)):
+#         main()

@@ -38,7 +38,12 @@
  *                           fix bug on m2 computation in tide_pole()
  *           2018/01/29 1.7  fix bug on OTL computation (##128)
  *-----------------------------------------------------------------------------*/
-#include "rtklib.h"
+
+ #include <fcntl.h>
+ #include <sys/mman.h>
+ #include <unistd.h>
+
+ #include "rtklib.h"
 
 static const char rcsid[] = "$Id:$";
 
@@ -1002,6 +1007,9 @@ double mapping_function(double e, double a, double b, double c)
     return m;
 }
 
+
+
+
 /* precise tropospheric model ------------------------------------------------*/
 static double prectrop(gtime_t time, const double *pos, const double *azel,
                        const prcopt_t *opt, const double *x, double *dtdx,
@@ -1009,66 +1017,79 @@ static double prectrop(gtime_t time, const double *pos, const double *azel,
 /* ,const filopt_t *file_opts) */
 {
     char *pythonpath = getenv("PYTHONPATH_RTKLIB");
-    char *ah_path = getenv("AH_SCRIPT_PATH");
+    /* char *ah_path = getenv("AH_SCRIPT_PATH"); */
     char *vmf3_path = getenv("VMF3_PATH");
-    char *station = getenv("CURRENT_STATION");
-    char *delaypath = getenv("CURRENT_DELAYPATH");
+    /* char *station = getenv("CURRENT_STATION"); */
+    /* char *delaypath = getenv("CURRENT_DELAYPATH"); */
 
-    char command_ah[999];
+    /* char command_ah[999]; */
     char command_vmf3[999];
 
-    // Construct the command with the PYTHONPATH and Python script call for AH
-    snprintf(command_ah, sizeof(command_ah), "%s %s --station %s --time_seconds %f", pythonpath, ah_path, station, time.time);
+    /* print time.time (int) to stderr */
+    /* fprintf(stderr, "%d\n", time.time); */
+    
+    
+    double mjd = calculate_mjd(time);
 
-    FILE *fp = popen(command_ah, "r");
 
+
+
+    /* Construct the command with the PYTHONPATH and Python script call for AH */
+    /* snprintf(command_ah, sizeof(command_ah), "%s %s --station %s --time_seconds %d", pythonpath, ah_path, station, time.time); */
+
+    snprintf(command_vmf3, sizeof(command_vmf3), "%s %s --time_seconds %d --mjd %lf --zd %lf --az %lf", pythonpath, vmf3_path, time.time,mjd,azel[1],azel[0]);
+
+    /* print "command_vmf3" to sderr*/
+   /* fprintf(stderr, "%s\n", command_vmf3); */
+
+    system(command_vmf3);
+
+    /*
+    FILE *fp = popen(command_vmf3, "r");
     if (fp == NULL)
     {
         perror("Failed to run Python script for AH");
         exit(1);
     }
+    
+    fprintf(stderr, "command called");
 
-    // 'lat', 'lon', 'alt', 'ah', 'aw', 'zhd', 'zwd', 'gn_h', 'ge_h', 'gn_w', 'ge_w' are the output variables from the Python script, from a print command:
 
-    double lat, lon, alt, ah, aw, zhd, zwd, gn_h, ge_h, gn_w, ge_w;
+    /* close fp: */
+   /* pclose(fp); */
 
-    if (fscanf(fp, "%lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf", &lat, &lon, &alt, &ah, &aw, &zhd, &zwd, &gn_h, &ge_h, &gn_w, &ge_w) != 11)
-    {
-        perror("Failed to read the output");
-        pclose(fp);
-        exit(1);
+    /* fprintf(stderr, "fp closed\n"); */
+
+
+    FILE *fp = fopen("/home/RTKLIB/delay_val.txt", "r");
+
+    /*
+    if (fp == NULL) {
+        perror("Error opening file");
+        exit(EXIT_FAILURE);
     }
 
-    // Construct the command with the PYTHONPATH and Python script call for VMF3
-    // argument list:
-    // ah, aw, mjd, lat, lon, h_ell, zd, az, gn_h, ge_h, gn_w, ge_w
+    */
+    
+    double delay_val;
 
-    double mjd = calculate_mjd(time);
+    fscanf(fp, "%lf", &delay_val);
 
-    snprintf(command_vmf3, sizeof(command_vmf3), "%s %s --mjd %lf --lat %lf --lon %lf --h_ell %lf --zd %lf --az %lf --gn_h %lf --ge_h %lf --gn_w %lf --ge_w %lf --ah %lf --aw %lf --time %lf", pythonpath, vmf3_path, mjd, lat, lon, alt, zwd, azel[1], gn_h, ge_h, gn_w, ge_w, ah, aw, time.time);
-
-    FILE *fp2 = popen(command_vmf3, "r");
-
-    if (fp2 == NULL)
-    {
-        perror("Failed to run Python script for VMF3");
-        exit(1);
+    /*
+    if (fscanf(fp, "%lf", &delay_val) != 1) {
+        fprintf(stderr, "Error reading double value from file\n");
+        fclose(fp);
+        exit(EXIT_FAILURE);
     }
 
-    double vmf_tropcorr;
+    */
+        
+    fclose(fp);
 
-    if (fscanf(fp2, "%lf", &vmf_tropcorr) != 1)
-    {
-        perror("Failed to read the output");
-        pclose(fp2);
-        exit(1);
-    }
 
-    pclose(fp);
-    pclose(fp2);
 
     
-    return vmf_tropcorr;
+    return delay_val;
 }
 /* phase and code residuals --------------------------------------------------*/
 static int res_ppp(int iter, const obsd_t *obs, int n, const double *rs,
@@ -1376,7 +1397,7 @@ extern void pppos(rtk_t *rtk, const obsd_t *obs, int n, const nav_t *nav)
         cc *.o -lf2c -lm
     Source for libf2c is in /netlib/f2c/libf2c.zip, e.g.,
 
-        http://www.netlib.org/f2c/libf2c.zip
+        http:/*www.netlib.org/f2c/libf2c.zip
 */
 /*
 /* #include "f2c.h"
@@ -1447,8 +1468,8 @@ extern void pppos(rtk_t *rtk, const obsd_t *obs, int n, const nav_t *nav)
     /*  Notes: */
 
     /*  1) The coefficients can be obtained from the primary website */
-    /*     http://ggosatm.hg.tuwien.ac.at/DELAY/ or the back-up website */
-    /*     http://www.hg.tuwien.ac.at/~ecmwf1/. */
+    /*     http:/*ggosatm.hg.tuwien.ac.at/DELAY/ or the back-up website */
+    /*     http:/*www.hg.tuwien.ac.at/~ecmwf1/. */
 
     /*  2) The mapping functions are dimensionless scale factors. */
 

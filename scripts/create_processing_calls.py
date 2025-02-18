@@ -43,7 +43,7 @@ def date_from_rnxdateline(inputrnxline):
 
     year, month, day = as_list[:3]
 
-    return datetime.date(year=int(year), month=int(month), day=int(day))
+    return date(year=int(year), month=int(month), day=int(day))
 
 
 def get_rinex_date(inputpath, key="TIME OF FIRST OBS"):
@@ -122,7 +122,7 @@ out-geoid          =internal   # (0:internal,1:egm96,2:egm08_2.5,3:egm08_1,4:gsi
 out-solstatic      =all        # (0:all,1:single)
 out-nmeaintv1      =0          # (s)
 out-nmeaintv2      =0          # (s)
-out-outstat        =0        # (0:off,1:state,2:residual)
+out-outstat        =off        # (0:off,1:state,2:residual)
 stats-eratio1      =100
 stats-eratio2      =100
 stats-errphase     =0.003      # (m)

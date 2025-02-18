@@ -9,7 +9,7 @@ except ImportError:
     from lib import *
 
 logging.basicConfig(
-    level=logging.WARNING,
+    level=logging.DEBUG,
     filename="scripts/logs/proc_calls.log",
     format="%(asctime)s - %(levelname)s - %(message)s",
     datefmt="%d-%b-%y %H:%M:%S",
@@ -24,7 +24,7 @@ curr_station_path_store = "curr_station_name.txt"
 # set the environment variables that are going to be called on the C program:
 os.environ["PYTHONPATH_RTKLIB"] = "/home/RTKLIB/.venv/bin/python"
 os.environ["AH_SCRIPT_PATH"] = "/home/RTKLIB/scripts/interpolate_ah.py"
-os.environ["VMF3_PATH"] = "/home/RTKLIB/scripts/interpolate_vmf_grid.py"
+os.environ["VMF3_PATH"] = "/home/RTKLIB/scripts/vmf3.py"
 
 with open(calls_path) as calls_file:
     for entry in tqdm(calls_file, total=621):

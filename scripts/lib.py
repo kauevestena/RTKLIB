@@ -12,9 +12,10 @@ from tqdm import tqdm
 from astropy.time import Time
 import logging
 
+from datetime import datetime, timezone, date
 
 # TO MODIFY:
-proc_scenario = "orig_nograd"
+proc_scenario = "vmf3_grads"
 
 # other constants:
 
@@ -25,7 +26,9 @@ rootpath_data = "/home/gnss_data"
 
 outputs_path = os.path.join(rootpath_data, "saidas")
 
-delays_header = "grad_e,grad_n,m_h,m_w_orig,m_w,zhd,zwd,x_0,x_1,x_2,tot_delay"
+delays_header = (
+    "grad_e,grad_n,m_h,m_w_orig,m_w,zhd,zwd,x_0,x_1,x_2,tot_delay,epoc_s,sub_sec"
+)
 
 proc_sc_root = {
     "orig": os.path.join(outputs_path, "orig"),
@@ -50,7 +53,6 @@ proc_sc_execs = {
 
 # from vmf3 import *
 
-six_hours_in_seconds = 21600
 
 fileformat = ".ac3"
 
@@ -117,7 +119,7 @@ estacoes_coord_fixas_mes = {
     },
 }
 
-base_folder = "vmf_grid"
+base_folder = "/home/RTKLIB/vmf_grid"
 
 
 def ajustar_longitude(lon):
@@ -410,6 +412,11 @@ def gps_time_to_utc(gps_seconds):
     t_utc = t.utc
     # Return as a naive datetime object (no timezone info)
     return t_utc.datetime
+
+
+def unix_to_utc(unix_seconds):
+    """Convert Unix timestamp (seconds since 1970-01-01) to UTC datetime (timezone-aware)."""
+    return datetime.fromtimestamp(unix_seconds, tz=timezone.utc)
 
 
 def find_interval(hour, intervals):
