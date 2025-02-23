@@ -1,4 +1,4 @@
-import sys
+import sys, os, socket
 
 sys.path.append("/home/RTKLIB/scripts")
 
@@ -6,21 +6,26 @@ sys.path.append("/home/RTKLIB/scripts")
 from interpolate_ah import *
 
 import numpy as np
-import argparse, os
+
+# import argparse, os
 from math import sin, cos
 
-import struct
+# import struct
 
-# import logging
+import logging
 
-# logging.basicConfig(
-#     level=logging.DEBUG,
-#     filename="/home/RTKLIB/scripts/logs/vmf_processing.log",
-#     format="%(asctime)s - %(levelname)s - %(message)s",
-#     datefmt="%d-%b-%y %H:%M:%S",
-#     filemode="w",
-#     encoding="utf-8",
-# )
+logging.basicConfig(
+    level=logging.WARNING,
+    filename="/home/RTKLIB/scripts/logs/vmf_processing.log",
+    format="%(asctime)s - %(levelname)s - %(message)s",
+    datefmt="%d-%b-%y %H:%M:%S",
+    filemode="w",
+    encoding="utf-8",
+)
+
+
+HOST = "127.0.0.1"
+PORT = 5000
 
 
 def vmf3_ht(mjd=None, lat=None, lon=None, h_ell=None, zd=None, ah=None, aw=None):
@@ -5206,6 +5211,9 @@ def modified_tropospheric_correction_vmf3(
     cos_el = cos(el)
     sin_el = sin(el)
 
+    cos_az = cos(az)
+    sin_az = sin(az)
+
     # # the mapping functions derivatives:
     # first order derivative:
     dmfhde = dm_de(ah, bh, ch, cos_el, sin_el)
@@ -5265,83 +5273,86 @@ def modified_tropospheric_correction_vmf3(
 
 
 # create argument parser
-parser = argparse.ArgumentParser()
+# parser = argparse.ArgumentParser()
 
-#        INPUT:
-#        o ah: hydrostatic mf coefficient a (http://vmf.geo.tuwien.ac.at/trop_products/)
-#        o aw: wet mf coefficient a (http://vmf.geo.tuwien.ac.at/trop_products/)
-#        o mjd: modified Julian date
-#        o lat: latitude (radians)
-#        o lon: longitude (radians)
-#        o h_ell: ellipsoidal height (m)
-#        o zd: zenith distance (radians)
+# #        INPUT:
+# #        o ah: hydrostatic mf coefficient a (http://vmf.geo.tuwien.ac.at/trop_products/)
+# #        o aw: wet mf coefficient a (http://vmf.geo.tuwien.ac.at/trop_products/)
+# #        o mjd: modified Julian date
+# #        o lat: latitude (radians)
+# #        o lon: longitude (radians)
+# #        o h_ell: ellipsoidal height (m)
+# #        o zd: zenith distance (radians)
 
-#        OUTPUT:
-#        o mfh: hydrostatic mapping factor
-#        o mfw: wet mapping factor
-# all inputs are mandatory, they shall have no default value
+# #        OUTPUT:
+# #        o mfh: hydrostatic mapping factor
+# #        o mfw: wet mapping factor
+# # all inputs are mandatory, they shall have no default value
 
-# cotz = 1.0 / tan(azel[1]);
+# # cotz = 1.0 / tan(azel[1]);
 
-# grad_n = m_w * cotz * cos(azel[0]);
-# grad_e = m_w * cotz * sin(azel[0]);
+# # grad_n = m_w * cotz * cos(azel[0]);
+# # grad_e = m_w * cotz * sin(azel[0]);
 
+# # parser.add_argument(
+# #     "--ah", type=float, help="hydrostatic mf coefficient a", required=True
+# # )
+# # parser.add_argument("--aw", type=float, help="wet mf coefficient a", required=True)
+# parser.add_argument("--mjd", type=float, help="modified Julian date", required=True)
+# # parser.add_argument("--lat", type=float, help="latitude (radians)", required=True)
+# # parser.add_argument("--lon", type=float, help="longitude (radians)", required=True)
+# # parser.add_argument("--gn_h", type=float, help="GN H", required=True)
+# # parser.add_argument("--gn_w", type=float, help="GN W", required=True)
+# # parser.add_argument("--ge_h", type=float, help="GE H", required=True)
+# # parser.add_argument("--ge_w", type=float, help="GE W", required=True)
+# # parser.add_argument("--h_ell", type=float, help="ellipsoidal height (m)", required=True)
 # parser.add_argument(
-#     "--ah", type=float, help="hydrostatic mf coefficient a", required=True
+#     "--zd", type=float, help="satellite zenith distance (radians)", required=True
 # )
-# parser.add_argument("--aw", type=float, help="wet mf coefficient a", required=True)
-parser.add_argument("--mjd", type=float, help="modified Julian date", required=True)
-# parser.add_argument("--lat", type=float, help="latitude (radians)", required=True)
-# parser.add_argument("--lon", type=float, help="longitude (radians)", required=True)
-# parser.add_argument("--gn_h", type=float, help="GN H", required=True)
-# parser.add_argument("--gn_w", type=float, help="GN W", required=True)
-# parser.add_argument("--ge_h", type=float, help="GE H", required=True)
-# parser.add_argument("--ge_w", type=float, help="GE W", required=True)
-# parser.add_argument("--h_ell", type=float, help="ellipsoidal height (m)", required=True)
-parser.add_argument(
-    "--zd", type=float, help="satellite zenith distance (radians)", required=True
-)
-parser.add_argument(
-    "--az", type=float, help="satelllite azimuth (radians)", required=True
-)
 # parser.add_argument(
-#     "--zhd", type=float, help="zenith hydrostatic delay (m)", required=True
+#     "--az", type=float, help="satelllite azimuth (radians)", required=True
 # )
-# parser.add_argument("--zwd", type=float, help="zenith wet delay (m)", required=True)
-# parser.add_argument("--time", type=float, help="time epoch in seconds", required=True)
+# # parser.add_argument(
+# #     "--zhd", type=float, help="zenith hydrostatic delay (m)", required=True
+# # )
+# # parser.add_argument("--zwd", type=float, help="zenith wet delay (m)", required=True)
+# # parser.add_argument("--time", type=float, help="time epoch in seconds", required=True)
 
-# parser.add_argument("--outpath", type=str, help="output path", required=True)
+# # parser.add_argument("--outpath", type=str, help="output path", required=True)
 
-# parser.add_argument("--station", type=str, help="station name", required=True)
-parser.add_argument(
-    "--time_seconds", type=float, help="GPS time in seconds", required=True
-)
+# # parser.add_argument("--station", type=str, help="station name", required=True)
+# parser.add_argument(
+#     "--time_seconds", type=float, help="GPS time in seconds", required=True
+# )
 
 
-args = parser.parse_args()
+# args = parser.parse_args()
 
-az = args.az
+# az = args.az
 
-# zhd = args.zhd
-# zwd = args.zwd
-# gn_h = args.gn_h
-# ge_h = args.ge_h
-# gn_w = args.gn_w
-# ge_w = args.ge_w
+# # zhd = args.zhd
+# # zwd = args.zwd
+# # gn_h = args.gn_h
+# # ge_h = args.ge_h
+# # gn_w = args.gn_w
+# # ge_w = args.ge_w
 
-cos_az = cos(az)
-sin_az = sin(az)
+# cos_az = cos(az)
+# sin_az = sin(az)
 
-# station = args.station.upper()
+# # station = args.station.upper()
 
-station = os.environ["CURRENT_STATION"]
-time = float(args.time_seconds)
+# time = float(args.time_seconds)
 
 # argument list:
 # ah, aw, mjd, lat, lon, h_ell, zd, az, gn_h, ge_h, gn_w, ge_w
 
 
-def main():
+def process(data_as_str):
+    station = os.environ["CURRENT_STATION"]
+
+    time, mjd, zd, az = tuple(map(float, data_as_str.split(",")))
+
     ah_params = interpolate_ah(station, time)
 
     ah = ah_params["ah"]
@@ -5358,16 +5369,14 @@ def main():
     lon = ah_params["lon"]
     h_ell = ah_params["alt"]
 
-    mfh, mfw, ah, aw, bh, bw, ch, cw, el = vmf3_ht(
-        ah, aw, args.mjd, lat, lon, h_ell, args.zd
-    )
+    mfh, mfw, ah, aw, bh, bw, ch, cw, el = vmf3_ht(ah, aw, mjd, lat, lon, h_ell, zd)
 
     # mfw_grads = mfw * (gn_w * cos_az + ge_w * sin_az)
     # mfh_grads = mfh * (gn_h * cos_az + ge_h * sin_az)
 
     # trop_corr_orig = mfh * zhd + mfw * zwd + mfh_grads + mfw_grads
 
-    trop_corr_orig = mfh * zhd + mfw * zwd
+    trop_corr = mfh * zhd + mfw * zwd
     mfw_grads = 0.0
 
     # trop_corr_mod = tropospheric_correction_vmf3(
@@ -5389,10 +5398,7 @@ def main():
     #     ge_w=ge_w,
     # )
 
-    trop_corr = trop_corr_orig
-
     with open(os.environ["CURRENT_DELAYPATH"], "a") as f:
-        # grad_e,grad_n,m_h,m_w_orig,m_w,zhd,zwd,x_0,x_1,x_2,tot_delay,epoch_s
 
         # grad_e :      {ge_h+ge_w:.6f}
         # grad_n :      {gn_h+gn_w:.6f}
@@ -5411,20 +5417,42 @@ def main():
             f"{ge_h+ge_w:.6f},{gn_h+gn_w:.6f},{mfh:.6f},{mfw:.6f},{mfw_grads:.6f},{zhd:.6f},{zwd:.6f},0,0,0,{trop_corr:5f},{time},\n"
         )
 
-    # with open("/home/RTKLIB/delay_val.txt", "w") as f:
-    #     f.write(f"{trop_corr:.10f}")
+    return trop_corr
 
-    # print(f"{trop_corr:.10f}")
 
-    # try:
-    #     write_shared_double(trop_corr)
-    #     logging.info(f"recorded to shared memory: {read_shared_double()}")
-    # except Exception as e:
-    #     logging.error(e)
+def handle_client(conn, addr):
+    """Handles communication with a single connected client."""
+    # print(f"Connected by {addr}")
+    while True:
+        data = conn.recv(1024)
+        if not data:
+            # No more data means the client disconnected
+            break
+        received_str = data.decode("utf-8").strip()
+        # print(f"Received: {received_str}")
 
-    with open("/home/RTKLIB/delay_val.txt", "wb") as f:
-        # Pack the double into binary format ('d' means a double)
-        f.write(struct.pack("d", trop_corr))
+        try:
+            processed = process(received_str)
+            conn.sendall(str(processed).encode("utf-8"))
+        except Exception as e:
+            logging.error(f"An unexpected error occurred while executing: {e}")
+
+    # print(f"Client disconnected: {addr}")
+
+
+def main():
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.bind((HOST, PORT))
+        s.listen()
+        print(f"Service listening on {HOST}:{PORT}")
+
+        while True:
+            # Accept a new client
+            conn, addr = s.accept()
+            with conn:
+                handle_client(conn, addr)
+                # After the client is done,
+                # go back to accept() to wait for a new one.
 
 
 if __name__ == "__main__":

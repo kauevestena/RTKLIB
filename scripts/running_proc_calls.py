@@ -22,10 +22,15 @@ curr_station_path_store = "curr_station_name.txt"
 
 
 # set the environment variables that are going to be called on the C program:
-os.environ["PYTHONPATH_RTKLIB"] = "/home/RTKLIB/.venv/bin/python"
-os.environ["AH_SCRIPT_PATH"] = "/home/RTKLIB/scripts/interpolate_ah.py"
-os.environ["VMF3_PATH"] = "/home/RTKLIB/scripts/vmf3.py"
+os.environ["PYTHONPATH_RTKLIB"] = python_path = "/home/RTKLIB/.venv/bin/python"
+os.environ["AH_SCRIPT_PATH"] = ah_path = "/home/RTKLIB/scripts/interpolate_ah.py"
+os.environ["VMF3_PATH"] = vmf3_path = "/home/RTKLIB/scripts/vmf3.py"
 
+if proc_scenario not in ("orig", "orig_nograd"):
+    inner_command = f"'{python_path} {vmf3_path}'"
+    subprocess.run(f'xterm -hold -e "bash -c {inner_command}" &', shell=True)
+    logging.info("VMF3 script executed, sleeping for 5 seconds")
+    time.sleep(5)
 
 # resuming capabilities:
 processed_dict = read_json_file("processed_list.json")

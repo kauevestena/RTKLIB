@@ -1007,6 +1007,62 @@ double mapping_function(double e, double a, double b, double c)
     return m;
 }
 
+#define HOST "127.0.0.1"  
+#define PORT 5000         
+#include <arpa/inet.h>
+
+double send_and_receive(const char *message) {
+    int sock = 0;
+    struct sockaddr_in serv_addr;
+    char buffer[1024] = {0};
+
+    /* 1. Create a socket */
+    if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
+        fprintf(stderr, "Socket creation error\n");
+        return -1.0; /* error indicator */
+    }
+
+    /* 2. Define server address */
+    memset(&serv_addr, 0, sizeof(serv_addr));
+    serv_addr.sin_family = AF_INET;
+    serv_addr.sin_port = htons(PORT);
+
+    /* 3. Convert address from text to binary form */
+    if (inet_pton(AF_INET, HOST, &serv_addr.sin_addr) <= 0) {
+        fprintf(stderr, "Invalid address / Address not supported\n");
+        close(sock);
+        return -1.0;
+    }
+
+    /* 4. Connect to the server */
+    if (connect(sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0) {
+        fprintf(stderr, "Connection Failed\n");
+        close(sock);
+        return -1.0;
+    }
+
+    /* 5. Send the message */
+    send(sock, message, strlen(message), 0);
+
+    /* 6. Receive the server's response */
+    int valread = read(sock, buffer, sizeof(buffer) - 1);
+    if (valread > 0) {
+        buffer[valread] = '\0';  /* null-terminate the received string */
+    } else {
+        fprintf(stderr, "No data received or error.\n");
+        close(sock);
+        return -1.0;
+    }
+
+    /* 7. Convert the response string to a double */
+    double result = strtod(buffer, NULL);
+
+    /* 8. Close the socket */
+    close(sock);
+
+    /* 9. Return the parsed double */
+    return result;
+}
 
 
 
@@ -1016,9 +1072,9 @@ static double prectrop(gtime_t time, const double *pos, const double *azel,
                        double *var)
 /* ,const filopt_t *file_opts) */
 {
-    char *pythonpath = getenv("PYTHONPATH_RTKLIB");
+    /* char *pythonpath = getenv("PYTHONPATH_RTKLIB"); */
     /* char *ah_path = getenv("AH_SCRIPT_PATH"); */
-    char *vmf3_path = getenv("VMF3_PATH");
+    /* char *vmf3_path = getenv("VMF3_PATH"); */
     /* char *station = getenv("CURRENT_STATION"); */
     /* char *delaypath = getenv("CURRENT_DELAYPATH"); */
 
@@ -1037,9 +1093,15 @@ static double prectrop(gtime_t time, const double *pos, const double *azel,
     /* Construct the command with the PYTHONPATH and Python script call for AH */
     /* snprintf(command_ah, sizeof(command_ah), "%s %s --station %s --time_seconds %d", pythonpath, ah_path, station, time.time); */
 
-    snprintf(command_vmf3, sizeof(command_vmf3), "%s %s --time_seconds %d --mjd %lf --zd %lf --az %lf", pythonpath, vmf3_path, time.time,mjd,azel[1],azel[0]);
+    /* snprintf(command_vmf3, sizeof(command_vmf3), "%s %s --time_seconds %d --mjd %lf --zd %lf --az %lf", pythonpath, vmf3_path, time.time,mjd,azel[1],azel[0]); */
 
+    snprintf(command_vmf3,"%d,%lf,%lf,%lf",time.time,mjd,azel[1],azel[0]);
+
+    return send_and_receive(command_vmf3);
+
+    /* 
     system(command_vmf3);
+    */
 
     /*
     FILE *fp = popen(command_vmf3, "r");
@@ -1084,8 +1146,11 @@ static double prectrop(gtime_t time, const double *pos, const double *azel,
     }
 
     */
+   /*
 
     FILE *fp = fopen("/home/RTKLIB/delay_val.txt", "rb");
+
+    */
 
     /*
     if (fp == NULL) {
@@ -1094,10 +1159,14 @@ static double prectrop(gtime_t time, const double *pos, const double *azel,
     }
 
     */
+
+    /*
         
     double delay_val;
 
     fread(&delay_val, sizeof(double), 1, fp);
+
+    */
 
     /*
     if (fread(&delay_val, sizeof(double), 1, fp) != 1) {
@@ -1107,9 +1176,11 @@ static double prectrop(gtime_t time, const double *pos, const double *azel,
     }
     */
 
+    /*
     fclose(fp);
     
     return delay_val;
+    */
 }
 /* phase and code residuals --------------------------------------------------*/
 static int res_ppp(int iter, const obsd_t *obs, int n, const double *rs,
