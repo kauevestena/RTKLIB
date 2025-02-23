@@ -1039,9 +1039,6 @@ static double prectrop(gtime_t time, const double *pos, const double *azel,
 
     snprintf(command_vmf3, sizeof(command_vmf3), "%s %s --time_seconds %d --mjd %lf --zd %lf --az %lf", pythonpath, vmf3_path, time.time,mjd,azel[1],azel[0]);
 
-    /* print "command_vmf3" to sderr*/
-   /* fprintf(stderr, "%s\n", command_vmf3); */
-
     system(command_vmf3);
 
     /*
@@ -1061,19 +1058,23 @@ static double prectrop(gtime_t time, const double *pos, const double *azel,
     /* fprintf(stderr, "fp closed\n"); */
 
 
-    FILE *fp = fopen("/home/RTKLIB/delay_val.txt", "r");
-
+    
     /*
     if (fp == NULL) {
         perror("Error opening file");
         exit(EXIT_FAILURE);
-    }
+        }
+        
+        */
+       
+    /* no checkings: */    
 
-    */
-    
+    /*
+    FILE *fp = fopen("/home/RTKLIB/delay_val.txt", "r");
     double delay_val;
-
     fscanf(fp, "%lf", &delay_val);
+    fclose(fp);
+    */
 
     /*
     if (fscanf(fp, "%lf", &delay_val) != 1) {
@@ -1083,11 +1084,30 @@ static double prectrop(gtime_t time, const double *pos, const double *azel,
     }
 
     */
+
+    FILE *fp = fopen("/home/RTKLIB/delay_val.txt", "rb");
+
+    /*
+    if (fp == NULL) {
+        perror("Error opening file");
+        exit(EXIT_FAILURE);
+    }
+
+    */
         
+    double delay_val;
+
+    fread(&delay_val, sizeof(double), 1, fp);
+
+    /*
+    if (fread(&delay_val, sizeof(double), 1, fp) != 1) {
+        perror("Error reading double from file");
+        fclose(fp);
+        exit(EXIT_FAILURE);
+    }
+    */
+
     fclose(fp);
-
-
-
     
     return delay_val;
 }

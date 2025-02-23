@@ -5,7 +5,7 @@ sys.path.append("scripts")
 
 import requests
 import numpy as np
-import calendar, os
+import calendar, os, json
 import pandas as pd
 from io import StringIO
 from tqdm import tqdm
@@ -452,3 +452,16 @@ def parse_data_file(file_path):
         result["data"] = data_dict
 
     return result
+
+
+def read_json_file(file_path, default={}):
+    if os.path.exists(file_path):
+        with open(file_path, "r", encoding="utf-8") as file:
+            return json.load(file)
+    else:
+        return default
+
+
+def dump_json_file(file_path, data):
+    with open(file_path, "w", encoding="utf-8") as file:
+        json.dump(data, file, indent=4)

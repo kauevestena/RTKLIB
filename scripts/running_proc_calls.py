@@ -26,6 +26,10 @@ os.environ["PYTHONPATH_RTKLIB"] = "/home/RTKLIB/.venv/bin/python"
 os.environ["AH_SCRIPT_PATH"] = "/home/RTKLIB/scripts/interpolate_ah.py"
 os.environ["VMF3_PATH"] = "/home/RTKLIB/scripts/vmf3.py"
 
+
+# resuming capabilities:
+processed_dict = read_json_file("processed_list.json")
+
 with open(calls_path) as calls_file:
     for entry in tqdm(calls_file, total=621):
 
@@ -33,6 +37,10 @@ with open(calls_path) as calls_file:
         #     continue
 
         curr_delay_filepath, call = entry.strip("\n").split(",")
+
+        if curr_delay_filepath in processed_dict:
+            logging.info(f"{curr_delay_filepath} already processed, skipping...")
+            continue
 
         filename = ntpath.basename(curr_delay_filepath)
 
@@ -66,7 +74,11 @@ with open(calls_path) as calls_file:
                 text=True,
             )
 
-            # logging.info(result.stdout)
+            logging.info(f"{curr_delay_filepath} processed")
+
+            processed_dict[curr_delay_filepath] = call
+
+            dump_json_file("processed_list.json", processed_dict)
 
         except subprocess.CalledProcessError as e:
             error_details = []

@@ -1,7 +1,13 @@
 import sys
 
+
 sys.path.append(".")
-from lib import *
+
+
+try:
+    from scripts.lib import *
+except ImportError:
+    from lib import *
 
 for estacao in tqdm(estacoes):
     lat, lon, h = estacoes[estacao]

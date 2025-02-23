@@ -2,22 +2,25 @@ import sys
 
 sys.path.append("/home/RTKLIB/scripts")
 
+
 from interpolate_ah import *
 
 import numpy as np
 import argparse, os
 from math import sin, cos
 
-import logging
+import struct
 
-logging.basicConfig(
-    level=logging.DEBUG,
-    filename="/home/RTKLIB/scripts/logs/vmf_processing.log",
-    format="%(asctime)s - %(levelname)s - %(message)s",
-    datefmt="%d-%b-%y %H:%M:%S",
-    filemode="w",
-    encoding="utf-8",
-)
+# import logging
+
+# logging.basicConfig(
+#     level=logging.DEBUG,
+#     filename="/home/RTKLIB/scripts/logs/vmf_processing.log",
+#     format="%(asctime)s - %(levelname)s - %(message)s",
+#     datefmt="%d-%b-%y %H:%M:%S",
+#     filemode="w",
+#     encoding="utf-8",
+# )
 
 
 def vmf3_ht(mjd=None, lat=None, lon=None, h_ell=None, zd=None, ah=None, aw=None):
@@ -5359,10 +5362,13 @@ def main():
         ah, aw, args.mjd, lat, lon, h_ell, args.zd
     )
 
-    mfw_grads = mfw * (gn_w * cos_az + ge_w * sin_az)
-    mfh_grads = mfh * (gn_h * cos_az + ge_h * sin_az)
+    # mfw_grads = mfw * (gn_w * cos_az + ge_w * sin_az)
+    # mfh_grads = mfh * (gn_h * cos_az + ge_h * sin_az)
 
-    trop_corr_orig = mfh * zhd + mfw * zwd + mfh_grads + mfw_grads
+    # trop_corr_orig = mfh * zhd + mfw * zwd + mfh_grads + mfw_grads
+
+    trop_corr_orig = mfh * zhd + mfw * zwd
+    mfw_grads = 0.0
 
     # trop_corr_mod = tropospheric_correction_vmf3(
     #     mfh=mfh,
@@ -5405,8 +5411,8 @@ def main():
             f"{ge_h+ge_w:.6f},{gn_h+gn_w:.6f},{mfh:.6f},{mfw:.6f},{mfw_grads:.6f},{zhd:.6f},{zwd:.6f},0,0,0,{trop_corr:5f},{time},\n"
         )
 
-    with open("/home/RTKLIB/delay_val.txt", "w") as f:
-        f.write(f"{trop_corr:.10f}")
+    # with open("/home/RTKLIB/delay_val.txt", "w") as f:
+    #     f.write(f"{trop_corr:.10f}")
 
     # print(f"{trop_corr:.10f}")
 
@@ -5415,6 +5421,10 @@ def main():
     #     logging.info(f"recorded to shared memory: {read_shared_double()}")
     # except Exception as e:
     #     logging.error(e)
+
+    with open("/home/RTKLIB/delay_val.txt", "wb") as f:
+        # Pack the double into binary format ('d' means a double)
+        f.write(struct.pack("d", trop_corr))
 
 
 if __name__ == "__main__":
