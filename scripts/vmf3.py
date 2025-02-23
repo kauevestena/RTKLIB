@@ -1,4 +1,4 @@
-import sys, os, socket
+import sys
 
 sys.path.append("/home/RTKLIB/scripts")
 
@@ -15,7 +15,7 @@ from math import sin, cos
 import logging
 
 logging.basicConfig(
-    level=logging.WARNING,
+    level=logging.DEBUG,
     filename="/home/RTKLIB/scripts/logs/vmf_processing.log",
     format="%(asctime)s - %(levelname)s - %(message)s",
     datefmt="%d-%b-%y %H:%M:%S",
@@ -24,8 +24,8 @@ logging.basicConfig(
 )
 
 
-HOST = "127.0.0.1"
-PORT = 5000
+# HOST = "127.0.0.1"
+# PORT = 5000
 
 
 def vmf3_ht(mjd=None, lat=None, lon=None, h_ell=None, zd=None, ah=None, aw=None):
@@ -5348,8 +5348,8 @@ def modified_tropospheric_correction_vmf3(
 # ah, aw, mjd, lat, lon, h_ell, zd, az, gn_h, ge_h, gn_w, ge_w
 
 
-def process(data_as_str):
-    station = os.environ["CURRENT_STATION"]
+def process(data_as_str, station, delaypath):
+    # station = os.environ["CURRENT_STATION"]
 
     time, mjd, zd, az = tuple(map(float, data_as_str.split(",")))
 
@@ -5398,7 +5398,7 @@ def process(data_as_str):
     #     ge_w=ge_w,
     # )
 
-    with open(os.environ["CURRENT_DELAYPATH"], "a") as f:
+    with open(delaypath, "a") as f:
 
         # grad_e :      {ge_h+ge_w:.6f}
         # grad_n :      {gn_h+gn_w:.6f}
@@ -5420,40 +5420,46 @@ def process(data_as_str):
     return trop_corr
 
 
-def handle_client(conn, addr):
-    """Handles communication with a single connected client."""
-    # print(f"Connected by {addr}")
-    while True:
-        data = conn.recv(1024)
-        if not data:
-            # No more data means the client disconnected
-            break
-        received_str = data.decode("utf-8").strip()
-        # print(f"Received: {received_str}")
+# def handle_client(conn, addr):
+#     """Handles communication with a single connected client."""
+#     # print(f"Connected by {addr}")
+#     while True:
+#         data = conn.recv(1024)
+#         if not data:
+#             # No more data means the client disconnected
+#             # logging.info(f"Client disconnected: {addr}")
+#             break
+#         received_str = data.decode("utf-8").strip()
+#         # print(f"Received: {received_str}")
 
-        try:
-            processed = process(received_str)
-            conn.sendall(str(processed).encode("utf-8"))
-        except Exception as e:
-            logging.error(f"An unexpected error occurred while executing: {e}")
+#         try:
+#             processed = process(received_str)
+#             conn.sendall(str(processed).encode("utf-8"))
+#         except Exception as e:
+#             logging.error(
+#                 f"An unexpected error occurred while executing: {e} Received: {received_str}"
+#             )
 
-    # print(f"Client disconnected: {addr}")
-
-
-def main():
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        s.bind((HOST, PORT))
-        s.listen()
-        print(f"Service listening on {HOST}:{PORT}")
-
-        while True:
-            # Accept a new client
-            conn, addr = s.accept()
-            with conn:
-                handle_client(conn, addr)
-                # After the client is done,
-                # go back to accept() to wait for a new one.
+#     # print(f"Client disconnected: {addr}")
 
 
-if __name__ == "__main__":
-    main()
+# def main():
+#     logging.info("script started")
+#     logging.debug(f"Available env vars: {os.environ}")
+#     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+#         s.bind((HOST, PORT))
+#         s.listen()
+#         print(f"Service listening on {HOST}:{PORT}")
+#         logging.info(f"Service listening on {HOST}:{PORT}")
+
+#         while True:
+#             # Accept a new client
+#             conn, addr = s.accept()
+#             with conn:
+#                 handle_client(conn, addr)
+#                 # After the client is done,
+#                 # go back to accept() to wait for a new one.
+
+
+# if __name__ == "__main__":
+#     main()

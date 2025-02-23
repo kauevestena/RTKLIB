@@ -1072,6 +1072,8 @@ static double prectrop(gtime_t time, const double *pos, const double *azel,
                        double *var)
 /* ,const filopt_t *file_opts) */
 {
+    fprintf(stderr, "arrived 01\n"); 
+
     /* char *pythonpath = getenv("PYTHONPATH_RTKLIB"); */
     /* char *ah_path = getenv("AH_SCRIPT_PATH"); */
     /* char *vmf3_path = getenv("VMF3_PATH"); */
@@ -1088,14 +1090,13 @@ static double prectrop(gtime_t time, const double *pos, const double *azel,
     double mjd = calculate_mjd(time);
 
 
-
-
     /* Construct the command with the PYTHONPATH and Python script call for AH */
     /* snprintf(command_ah, sizeof(command_ah), "%s %s --station %s --time_seconds %d", pythonpath, ah_path, station, time.time); */
 
     /* snprintf(command_vmf3, sizeof(command_vmf3), "%s %s --time_seconds %d --mjd %lf --zd %lf --az %lf", pythonpath, vmf3_path, time.time,mjd,azel[1],azel[0]); */
 
-    snprintf(command_vmf3,"%d,%lf,%lf,%lf",time.time,mjd,azel[1],azel[0]);
+    snprintf(command_vmf3,sizeof(command_vmf3),"%d,%lf,%lf,%lf",time.time,mjd,azel[1],azel[0]);
+
 
     return send_and_receive(command_vmf3);
 

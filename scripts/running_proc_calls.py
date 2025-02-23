@@ -23,8 +23,8 @@ curr_station_path_store = "curr_station_name.txt"
 
 # set the environment variables that are going to be called on the C program:
 os.environ["PYTHONPATH_RTKLIB"] = python_path = "/home/RTKLIB/.venv/bin/python"
-os.environ["AH_SCRIPT_PATH"] = ah_path = "/home/RTKLIB/scripts/interpolate_ah.py"
-os.environ["VMF3_PATH"] = vmf3_path = "/home/RTKLIB/scripts/vmf3.py"
+# os.environ["AH_SCRIPT_PATH"] = ah_path = "/home/RTKLIB/scripts/interpolate_ah.py"
+os.environ["VMF3_PATH"] = vmf3_path = "/home/RTKLIB/scripts/processing_server.py"
 
 if proc_scenario not in ("orig", "orig_nograd"):
     inner_command = f"'{python_path} {vmf3_path}'"
@@ -55,6 +55,11 @@ with open(calls_path) as calls_file:
         os.environ["CURRENT_STATION"] = stationname
         os.environ["CURRENT_DELAYPATH"] = curr_delay_filepath
 
+        # sending them, if needed:
+        if proc_scenario not in ("orig", "orig_nograd"):
+            send_environ("CURRENT_STATION")
+            send_environ("CURRENT_DELAYPATH")
+
         # if the file already exists...
         if proc_scenario not in ("orig", "orig_nograd"):
             with open(curr_delay_filepath, "w+") as f:
@@ -71,6 +76,7 @@ with open(calls_path) as calls_file:
         time.sleep(0.1)
 
         try:
+            logging.info(f"Processing {curr_delay_filepath}...")
             result = subprocess.run(
                 call,
                 shell=True,
