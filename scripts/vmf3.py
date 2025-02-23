@@ -5353,23 +5353,29 @@ def process(data_as_str, station, delaypath):
 
     time, mjd, zd, az = tuple(map(float, data_as_str.split(",")))
 
-    ah_params = interpolate_ah(station, time)
+    # ah_params = interpolate_ah(station, time)
 
-    ah = ah_params["ah"]
-    aw = ah_params["aw"]
-    gn_h = ah_params["gn_h"]
-    ge_h = ah_params["ge_h"]
-    gn_w = ah_params["gn_w"]
-    ge_w = ah_params["ge_w"]
+    # ah = ah_params["ah"]
+    # aw = ah_params["aw"]
+    # gn_h = ah_params["gn_h"]
+    # ge_h = ah_params["ge_h"]
+    # gn_w = ah_params["gn_w"]
+    # ge_w = ah_params["ge_w"]
 
-    zhd = ah_params["zhd"]
-    zwd = ah_params["zwd"]
+    # zhd = ah_params["zhd"]
+    # zwd = ah_params["zwd"]
 
-    lat = ah_params["lat"]
-    lon = ah_params["lon"]
-    h_ell = ah_params["alt"]
+    # lat = ah_params["lat"]
+    # lon = ah_params["lon"]
+    # h_ell = ah_params["alt"]
 
-    mfh, mfw, ah, aw, bh, bw, ch, cw, el = vmf3_ht(ah, aw, mjd, lat, lon, h_ell, zd)
+    # new order: LAT LON ALT AH AW ZHD ZWD GN_H GE_H GN_W GE_W
+    lat, lon, h_ell, ah, aw, zhd, zwd, gn_h, ge_h, gn_w, ge_w = interpolate_ah(
+        station, time
+    )
+
+    # mfh, mfw, ah, aw, bh, bw, ch, cw, el = vmf3_ht(ah, aw, mjd, lat, lon, h_ell, zd)
+    mfh, mfw, ah, aw, _, _, _, _, _ = vmf3_ht(ah, aw, mjd, lat, lon, h_ell, zd)
 
     # mfw_grads = mfw * (gn_w * cos_az + ge_w * sin_az)
     # mfh_grads = mfh * (gn_h * cos_az + ge_h * sin_az)
