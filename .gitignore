@@ -183,3 +183,6 @@ scripts/logs
 
 app/rnx2rtkp/gcc/rnx2rtkp
 delay_val.txt
+test.txt
+processed_list.json
+tests

@@ -205,13 +205,13 @@ def interpolate_ah(station, time):
         "ge_w",
     ]
 
+    proportion = dt_begin.total_seconds() / six_hours_in_seconds
+
     for value in values_to_be_interpolated:
         val_begin = data_begin["data"][value]
         val_end = data_end["data"][value]
         dif_val = val_end - val_begin
-        final_data[value] = val_begin + dif_val * (
-            dt_begin.total_seconds() / six_hours_in_seconds
-        )
+        final_data[value] = val_begin + dif_val * proportion
 
     # # print all values in the final_data dictionary, in the same line, with 10 decimal places:
     # final_data_str = " ".join([f"{value:.10f}" for value in final_data.values()])
