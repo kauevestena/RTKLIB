@@ -1087,7 +1087,7 @@ static double prectrop(gtime_t time, const double *pos, const double *azel,
     /* fprintf(stderr, "%d\n", time.time); */
     
     
-    double mjd = calculate_mjd(time);
+    /* double mjd = calculate_mjd(time); */
 
 
     /* Construct the command with the PYTHONPATH and Python script call for AH */
@@ -1095,7 +1095,7 @@ static double prectrop(gtime_t time, const double *pos, const double *azel,
 
     /* snprintf(command_vmf3, sizeof(command_vmf3), "%s %s --time_seconds %d --mjd %lf --zd %lf --az %lf", pythonpath, vmf3_path, time.time,mjd,azel[1],azel[0]); */
 
-    snprintf(command_vmf3,sizeof(command_vmf3),"%d,%lf,%lf,%lf",time.time,mjd,azel[1],azel[0]);
+    snprintf(command_vmf3,sizeof(command_vmf3),"%d,%lf,%lf,%lf",time.time,0.0,azel[1],azel[0]);
 
 
     return send_and_receive(command_vmf3);

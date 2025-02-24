@@ -26,9 +26,7 @@ rootpath_data = "/home/gnss_data"
 
 outputs_path = os.path.join(rootpath_data, "saidas")
 
-delays_header = (
-    "grad_e,grad_n,m_h,m_w_orig,m_w,zhd,zwd,x_0,x_1,x_2,tot_delay,epoc_s,sub_sec"
-)
+delays_header = "grad_e,grad_n,m_h,m_w_orig,m_w,zhd,zwd,x_0,x_1,x_2,tot_delay,epoch_s,mjd,az,el,zd,lat,lon,h_ell"
 
 proc_sc_root = {
     "orig": os.path.join(outputs_path, "orig"),
@@ -61,7 +59,7 @@ horarios = [0, 6, 12, 18]
 
 anos = [2020]
 
-meses = [1, 6]
+meses = [1, 7]
 
 estacoes = {
     "BRAZ": (-15.947475341666668, -47.877869, 1106.02),

@@ -5351,7 +5351,12 @@ def modified_tropospheric_correction_vmf3(
 def process(data_as_str, station, delaypath):
     # station = os.environ["CURRENT_STATION"]
 
-    time, mjd, zd, az = tuple(map(float, data_as_str.split(",")))
+    time, _, az, el = tuple(map(float, data_as_str.split(",")))
+
+    mjd = unix_to_mjd(time)
+
+    # ZD in radians
+    zd = (90 * DEG2RAD) - el
 
     # ah_params = interpolate_ah(station, time)
 
@@ -5375,7 +5380,9 @@ def process(data_as_str, station, delaypath):
     )
 
     # mfh, mfw, ah, aw, bh, bw, ch, cw, el = vmf3_ht(ah, aw, mjd, lat, lon, h_ell, zd)
-    mfh, mfw, ah, aw, _, _, _, _, _ = vmf3_ht(ah, aw, mjd, lat, lon, h_ell, zd)
+    mfh, mfw, ah, aw, _, _, _, _, el = vmf3_ht(
+        mjd=mjd, lat=lat * DEG2RAD, lon=lon * DEG2RAD, h_ell=h_ell, zd=zd, ah=ah, aw=aw
+    )
 
     # mfw_grads = mfw * (gn_w * cos_az + ge_w * sin_az)
     # mfh_grads = mfh * (gn_h * cos_az + ge_h * sin_az)
@@ -5418,9 +5425,19 @@ def process(data_as_str, station, delaypath):
         # x_2 :         0
         # tot_delay :   {trop_corr:5f}
         # epoch_s :     {args.time}
+        # mjd :         {mjd}
+        # az:           {az}
+        # el:           {el}
+        # zd :          {zd}
+        # lat :         {lat}
+        # lon :         {lon}
+        # h_ell :       {h_ell}
+
+        # header:
+        # grad_e,grad_n,m_h,m_w_orig,m_w,zhd,zwd,x_0,x_1,x_2,tot_delay,epoch_s,mjd,az,el,zd,lat,lon,h_ell
 
         f.write(
-            f"{ge_h+ge_w:.6f},{gn_h+gn_w:.6f},{mfh:.6f},{mfw:.6f},{mfw_grads:.6f},{zhd:.6f},{zwd:.6f},0,0,0,{trop_corr:5f},{time},\n"
+            f"{ge_h+ge_w:.6f},{gn_h+gn_w:.6f},{mfh:.6f},{mfw:.6f},{mfw_grads:.6f},{zhd:.6f},{zwd:.6f},0,0,0,{trop_corr:5f},{time},{mjd},{az},{el},{zd},{lat},{lon},{h_ell}\n"
         )
 
     return trop_corr

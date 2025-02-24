@@ -14,6 +14,9 @@ import os
 from datetime import datetime, timezone
 
 
+DEG2RAD = np.pi / 180
+RAD2DEG = 180 / np.pi
+
 # inputs:
 # - station name
 # - GPS time in seconds
@@ -237,6 +240,19 @@ def parse_data_file(filename):
 def cached_parse_data_file(path):
     """Cache the parsed data file (returns a NumPy array of 11 floats)."""
     return parse_data_file(path)
+
+
+def unix_to_mjd(unix_timestamp):
+    # Convert Unix timestamp to datetime in UTC
+    dt = datetime.fromtimestamp(unix_timestamp, timezone.utc)
+
+    # Julian Date calculation
+    jd = dt.timestamp() / 86400.0 + 2440587.5
+
+    # Modified Julian Date calculation
+    mjd = jd - 2400000.5
+
+    return mjd
 
 
 def interpolate_ah(station, time):
