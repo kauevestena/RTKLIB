@@ -5115,7 +5115,7 @@ def vmf3_ht(mjd=None, lat=None, lon=None, h_ell=None, zd=None, ah=None, aw=None)
     ht_corr = ht_corr_coef * h_ell_km
     mfh = mfh + ht_corr
 
-    return mfh, mfw, ah, aw, bh, bw, ch, cw, el
+    return mfh, mfw, bh, bw, ch, cw, el
 
 
 def dm_de(a, b, c, cos_el, sin_el):
@@ -5379,9 +5379,12 @@ def process(data_as_str, station, delaypath):
         station, time
     )
 
-    # mfh, mfw, ah, aw, bh, bw, ch, cw, el = vmf3_ht(ah, aw, mjd, lat, lon, h_ell, zd)
-    mfh, mfw, ah, aw, _, _, _, _, el = vmf3_ht(
-        mjd=mjd, lat=lat * DEG2RAD, lon=lon * DEG2RAD, h_ell=h_ell, zd=zd, ah=ah, aw=aw
+    lat_rad = lat * DEG2RAD
+    lon_rad = lon * DEG2RAD
+
+    # mfh, mfw, bh, bw, ch, cw, el = vmf3_ht(ah, aw, mjd, lat, lon, h_ell, zd)
+    mfh, mfw, _, _, _, _, el = vmf3_ht(
+        mjd=mjd, lat=lat_rad, lon=lon_rad, h_ell=h_ell, zd=zd, ah=ah, aw=aw
     )
 
     # mfw_grads = mfw * (gn_w * cos_az + ge_w * sin_az)
@@ -5429,15 +5432,17 @@ def process(data_as_str, station, delaypath):
         # az:           {az}
         # el:           {el}
         # zd :          {zd}
-        # lat :         {lat}
-        # lon :         {lon}
+        # lat :         {lat_rad}
+        # lon :         {lon_rad}
         # h_ell :       {h_ell}
+        # ah :          {ah}
+        # aw :          {aw}
 
         # header:
-        # grad_e,grad_n,m_h,m_w_orig,m_w,zhd,zwd,x_0,x_1,x_2,tot_delay,epoch_s,mjd,az,el,zd,lat,lon,h_ell
+        # grad_e,grad_n,m_h,m_w_orig,m_w,zhd,zwd,x_0,x_1,x_2,tot_delay,epoch_s,mjd,az,el,zd,lat,lon,h_ell,ah,aw
 
         f.write(
-            f"{ge_h+ge_w:.6f},{gn_h+gn_w:.6f},{mfh:.6f},{mfw:.6f},{mfw_grads:.6f},{zhd:.6f},{zwd:.6f},0,0,0,{trop_corr:5f},{time},{mjd},{az},{el},{zd},{lat},{lon},{h_ell}\n"
+            f"{ge_h+ge_w:.6f},{gn_h+gn_w:.6f},{mfh:.6f},{mfw:.6f},{mfw_grads:.6f},{zhd:.6f},{zwd:.6f},0,0,0,{trop_corr:5f},{time},{mjd},{az*RAD2DEG},{el*RAD2DEG},{zd*RAD2DEG},{lat},{lon},{h_ell},{ah},{aw}\n"
         )
 
     return trop_corr

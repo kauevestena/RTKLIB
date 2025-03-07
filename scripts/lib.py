@@ -26,7 +26,7 @@ rootpath_data = "/home/gnss_data"
 
 outputs_path = os.path.join(rootpath_data, "saidas")
 
-delays_header = "grad_e,grad_n,m_h,m_w_orig,m_w,zhd,zwd,x_0,x_1,x_2,tot_delay,epoch_s,mjd,az,el,zd,lat,lon,h_ell"
+delays_header = "grad_e,grad_n,m_h,m_w_orig,m_w,zhd,zwd,x_0,x_1,x_2,tot_delay,epoch_s,mjd,az,el,zd,lat,lon,h_ell,ah,aw"
 
 proc_sc_root = {
     "orig": os.path.join(outputs_path, "orig"),

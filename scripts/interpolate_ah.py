@@ -1,37 +1,11 @@
-# import sys
-# import os
-# import mmap
-# import struct
-
 import os
-
-# import mmap, struct
-
-# import logging
-
-# sys.path.append(".")
-# sys.path.append("scripts")
 from datetime import datetime, timezone
+from functools import lru_cache
+import numpy as np
 
 
 DEG2RAD = np.pi / 180
 RAD2DEG = 180 / np.pi
-
-# inputs:
-# - station name
-# - GPS time in seconds
-
-# logging.basicConfig(
-#     level=logging.INFO,
-#     filename="/home/RTKLIB/scripts/logs/interpolate_ah.log",
-#     format="%(asctime)s - %(levelname)s - %(message)s",
-#     datefmt="%d-%b-%y %H:%M:%S",
-#     filemode="a",
-# )
-
-from functools import lru_cache
-import numpy as np
-
 
 base_folder = "/home/RTKLIB/vmf_grid"
 fileformat = ".ac3"

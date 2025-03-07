@@ -1095,93 +1095,11 @@ static double prectrop(gtime_t time, const double *pos, const double *azel,
 
     /* snprintf(command_vmf3, sizeof(command_vmf3), "%s %s --time_seconds %d --mjd %lf --zd %lf --az %lf", pythonpath, vmf3_path, time.time,mjd,azel[1],azel[0]); */
 
-    snprintf(command_vmf3,sizeof(command_vmf3),"%d,%lf,%lf,%lf",time.time,0.0,azel[1],azel[0]);
+    snprintf(command_vmf3,sizeof(command_vmf3),"%d,%lf,%lf,%lf",time.time,0.0,azel[0],azel[1]);
 
 
     return send_and_receive(command_vmf3);
 
-    /* 
-    system(command_vmf3);
-    */
-
-    /*
-    FILE *fp = popen(command_vmf3, "r");
-    if (fp == NULL)
-    {
-        perror("Failed to run Python script for AH");
-        exit(1);
-    }
-    
-    fprintf(stderr, "command called");
-
-
-    /* close fp: */
-   /* pclose(fp); */
-
-    /* fprintf(stderr, "fp closed\n"); */
-
-
-    
-    /*
-    if (fp == NULL) {
-        perror("Error opening file");
-        exit(EXIT_FAILURE);
-        }
-        
-        */
-       
-    /* no checkings: */    
-
-    /*
-    FILE *fp = fopen("/home/RTKLIB/delay_val.txt", "r");
-    double delay_val;
-    fscanf(fp, "%lf", &delay_val);
-    fclose(fp);
-    */
-
-    /*
-    if (fscanf(fp, "%lf", &delay_val) != 1) {
-        fprintf(stderr, "Error reading double value from file\n");
-        fclose(fp);
-        exit(EXIT_FAILURE);
-    }
-
-    */
-   /*
-
-    FILE *fp = fopen("/home/RTKLIB/delay_val.txt", "rb");
-
-    */
-
-    /*
-    if (fp == NULL) {
-        perror("Error opening file");
-        exit(EXIT_FAILURE);
-    }
-
-    */
-
-    /*
-        
-    double delay_val;
-
-    fread(&delay_val, sizeof(double), 1, fp);
-
-    */
-
-    /*
-    if (fread(&delay_val, sizeof(double), 1, fp) != 1) {
-        perror("Error reading double from file");
-        fclose(fp);
-        exit(EXIT_FAILURE);
-    }
-    */
-
-    /*
-    fclose(fp);
-    
-    return delay_val;
-    */
 }
 /* phase and code residuals --------------------------------------------------*/
 static int res_ppp(int iter, const obsd_t *obs, int n, const double *rs,
