@@ -1,4 +1,4 @@
-import sys
+import sys, os
 
 sys.path.append(".")
 sys.path.append("scripts")
@@ -494,3 +494,42 @@ def send_environ(key, host="127.0.0.1", port=5001):
             # print("Control server response:", response)
     except Exception as e:
         print(f"Error sending environment variable: {e}")
+
+
+def parallel_exec(iterable, exec_func, num_processes, timeout=None):
+    """
+    Execute a function in parallel over an iterable using a process pool
+    with a progress bar.
+
+    Args:
+        iterable (iterable): An iterable of tasks to process.
+        exec_func (callable): A function that accepts a single item from
+                              the iterable. This function must be pickleable.
+        num_processes (int): Number of worker processes to use.
+
+    Returns:
+        list: A list containing the results of each call to exec_func.
+              Note that the order of results may not correspond to the order
+              of the input iterable.
+    """
+    import concurrent.futures
+
+    with tqdm(total=len(iterable)) as pbar:
+        with concurrent.futures.ProcessPoolExecutor(
+            max_workers=num_processes
+        ) as executor:
+            # Submit tasks to the executor
+            futures = [executor.submit(exec_func, item) for item in iterable]
+
+            results = []
+
+            # Process results as they complete
+            for future in concurrent.futures.as_completed(futures, timeout=timeout):
+                try:
+                    results.append(future.result())
+                except Exception as e:
+                    logging.error("Error processing item: %s", e)
+                finally:
+                    pbar.update()
+
+    return results
