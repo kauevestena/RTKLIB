@@ -5,33 +5,40 @@ sys.path.append("scripts")
 
 import requests
 import numpy as np
-import calendar, os, json
+import calendar, os, json, subprocess
 import pandas as pd
 from io import StringIO
 from tqdm import tqdm
 from astropy.time import Time
 import logging
+from time import sleep
 
 from datetime import datetime, timezone, date
 
 # TO MODIFY:
-proc_scenario = "vmf3_grads"
+proc_scenario = "vmf3_nograd"
 
 # other constants:
 
 calls_path = "app_calls.txt"
+
+stationwise_calls_path = "scripts/stationwise_calls.json"
+
+already_done_stations_path = "scripts/already_done_stations.txt"
+already_done_calls_path = "scripts/already_done_calls.txt"
 
 # don't forget to create the symlink to the VMF3 data!
 rootpath_data = "/home/gnss_data"
 
 outputs_path = os.path.join(rootpath_data, "saidas")
 
-delays_header = "grad_e,grad_n,m_h,m_w_orig,m_w,zhd,zwd,x_0,x_1,x_2,tot_delay,epoch_s,mjd,az,el,zd,lat,lon,h_ell,ah,aw"
+delays_header = "grad_e,grad_n,m_h,m_w_orig,m_w,zhd,zwd,x_0,x_1,x_2,tot_delay,epoch_s,mjd,az,el,zd,ah,aw"
 
 proc_sc_root = {
     "orig": os.path.join(outputs_path, "orig"),
     "orig_nograd": os.path.join(outputs_path, "orig_nograd"),
     "vmf3_grads": os.path.join(outputs_path, "vmf3_grads"),
+    "vmf3_nograd": os.path.join(outputs_path, "vmf3_nograd"),
     "mod_vmf3_grads": os.path.join(outputs_path, "mod_vmf3_grads"),
     # "mod_vmf3_ztd_orig": os.path.join(outputs_path, "mod_vmf3_ztd_orig"),
 }
@@ -46,6 +53,7 @@ proc_sc_execs = {
     "orig_nograd": exec_paths["orig"],
     "vmf3_grads": exec_paths["mod"],
     "mod_vmf3_grads": exec_paths["mod"],
+    "vmf3_nograd": exec_paths["mod"],
     # "mod_vmf3_ztd_orig": exec_paths["mod"],
 }
 
@@ -477,7 +485,7 @@ def send_environ(key, host="127.0.0.1", port=5001):
     # Retrieve the environment variable's value.
     value = os.environ.get(key)
     if value is None:
-        print(f"Environment variable '{key}' not found.")
+        logging.error(f"Environment variable '{key}' not found.")
         return
 
     # Prepare the message to send (format: "KEY:VALUE")
@@ -533,3 +541,118 @@ def parallel_exec(iterable, exec_func, num_processes, timeout=None):
                     pbar.update()
 
     return results
+
+def read_file_as_list(file_path):
+    """
+    Read a text file and return its contents as a list of lines.
+
+    Args:
+        file_path (str): Path to the text file.
+
+    Returns:
+        list: A list containing the lines of the text file.
+    """
+    if not os.path.exists(file_path):
+        return []
+    else:
+        with open(file_path, "r") as file:
+            return file.readlines()
+
+def write_list_to_file(data_list, file_path):
+    """
+    Write a list of strings to a text file.
+
+    Args:
+        data_list (list): A list of strings to write to the file.
+        file_path (str): Path to the text file.
+    """
+    with open(file_path, "w") as file:
+        file.writelines(data_list)
+
+# set the environment variables that are going to be called on the C program:
+os.environ["PYTHONPATH_RTKLIB"] = python_path = "/home/RTKLIB/.venv/bin/python"
+# os.environ["AH_SCRIPT_PATH"] = ah_path = "/home/RTKLIB/scripts/interpolate_ah.py"
+os.environ["VMF3_PATH"] = vmf3_path = "/home/RTKLIB/scripts/processing_server4.py"
+
+def launch_proc_server():
+    """
+    Launch the processing server.
+    """
+    inner_command = f"'{python_path} {vmf3_path}'"
+    subprocess.run(f'xterm -hold -e "bash -c {inner_command}" &', shell=True)
+    logging.info("Server Lauch script executed, sleeping for 5 seconds")
+    sleep(5)
+
+# creating some dirs:
+create_dir('scripts/logs')
+
+def append_to_file(filepath, message='',extra="\n"):
+    with open(filepath, "a") as f:
+        f.write(message + extra)
+
+def remove_if_exists(filepath):
+    if os.path.exists(filepath):
+        os.remove(filepath)
+
+def dirpath(filepath):
+    """
+    Returns the directory portion of the provided filepath.
+
+    Args:
+        filepath (str): The file path from which to extract the directory.
+
+    Returns:
+        str: The directory portion of the filepath.
+    """
+    return os.path.dirname(filepath)
+
+def filename(filepath):
+    """
+    Returns the filename portion of the provided filepath.
+
+    Args:
+        filepath (str): The file path from which to extract the filename.
+
+    Returns:
+        str: The filename portion of the filepath.
+    """
+    return os.path.basename(filepath)
+
+def clean_unfinished_outputs(calls_list):
+    outlist = []
+
+    already_done_calls = read_file_as_list(already_done_calls_path)
+
+    for call in calls_list:
+        if call not in already_done_calls:
+            outlist.append(call)
+
+            tokenized_call = call.split('"')
+
+            pos_path = [s for s in tokenized_call if "pos" in s][0]
+
+            pos_dirpath = dirpath(pos_path)
+
+            pos_filename = filename(pos_path)
+
+            delays_dirpath = os.path.join(dirpath(pos_dirpath),'delays')
+
+            doy = pos_filename.split('_')[0][-4:-1]
+
+            delaypaths = [f for f in os.listdir(delays_dirpath) if doy in f]
+
+            if delaypaths:
+                for delaypath in delaypaths:
+                    delaypath_full = os.path.join(delays_dirpath,delaypath)
+
+                    remove_file_if_exists(delaypath_full)
+
+
+            # cleansing:
+            remove_file_if_exists(pos_path)
+
+        else:
+            logging.info(f"skipping already done call: {call}")
+
+
+    return outlist

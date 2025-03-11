@@ -228,6 +228,12 @@ def unix_to_mjd(unix_timestamp):
 
     return mjd
 
+def date_to_year_doy(date_obj: datetime.date):
+    year = date_obj.year
+    # Using timetuple to get day-of-year
+    doy = date_obj.timetuple().tm_yday
+    return year, doy
+
 
 def interpolate_ah(station, time):
     """

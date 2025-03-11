@@ -8,5 +8,7 @@
     ln -s "/home/kaue/OneDrive/Arquivos de Lais Thuany Cardoso Theodoro - VMF3" /home/gnss_data
     ln -s /home/kaue/RTKLIB /home/RTKLIB
 
+- Compile RTKLIB at "app/rnx2rtkp/gcc"
+
 
 # run "test_setup" to be sure that is everything allright!

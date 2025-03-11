@@ -149,6 +149,7 @@ file-eopfile       ={eop_filepath}  """
     with open(outpath, "w+") as outfile:
         outfile.write(file_as_string)
 
+stationwise_calls = {}
 
 # doing the processing stuff
 with open(calls_path, "w+", encoding="utf-8") as calls_file:
@@ -156,6 +157,9 @@ with open(calls_path, "w+", encoding="utf-8") as calls_file:
         epochpath = os.path.join(basepath, epoch)
 
         for station in tqdm(stations):
+            # add to stationwise_calls
+            if not station in stationwise_calls:
+                stationwise_calls[station] = []
 
             # basepath for subfolders with input files
             station_epoch_path = os.path.join(epochpath, "RBMC", station)
@@ -333,4 +337,8 @@ with open(calls_path, "w+", encoding="utf-8") as calls_file:
 
                         calls_file.flush()
 
+                        stationwise_calls[station].append(app_call)
+
                         # end
+
+dump_json_file(stationwise_calls_path, stationwise_calls)
