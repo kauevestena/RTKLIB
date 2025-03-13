@@ -39,13 +39,11 @@ def entry_proc(runstring):
     return result
 
 
-
-
 if proc_scenario in ("orig", "orig_nograd"):
     logging.error("This script is not meant to be run in 'orig' or 'orig_nograd' mode")
     exit(1)
 
-launch_proc_server()
+launch_proc_server(False)
 
 def main():
     # Resuming capabilities: read the list of already processed stations to avoid reprocessing them

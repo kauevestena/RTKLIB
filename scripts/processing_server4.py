@@ -59,6 +59,7 @@ async def handle_control(reader, writer):
                 async with control_lock:
                     control_vars[key] = value
                 print(f"Updated control variable: {key} = {value}")
+                logging.info(f"Updated control variable: {key} = {value}")
             except ValueError:
                 logging.error(f"Invalid control message: {data}")
             except Exception as e:
