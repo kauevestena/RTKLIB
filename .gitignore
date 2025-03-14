@@ -190,3 +190,4 @@ app_calls.txt
 scripts/already_done_calls.txt
 scripts/already_done_stations.txt
 scripts/stationwise_calls.json
+scripts/already_done_calls_broken.txt

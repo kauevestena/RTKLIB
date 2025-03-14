@@ -5398,14 +5398,16 @@ def process(data_as_str, station, delaypath):
         part_of_the_year = "INVERNO" if doy > 180 else "VERAO"
         delaypath = os.path.join(delaypath,part_of_the_year,station.upper(),"delays",f"{station.lower()}{floor(doy):03d}_delays.txt")
 
+    cos_az = cos(az)
+    sin_az = sin(az)
 
-    # mfw_grads = mfw * (gn_w * cos_az + ge_w * sin_az)
-    # mfh_grads = mfh * (gn_h * cos_az + ge_h * sin_az)
+    mfw_grads = mfw * (gn_w * cos_az + ge_w * sin_az)
+    mfh_grads = mfh * (gn_h * cos_az + ge_h * sin_az)
 
-    # trop_corr_orig = mfh * zhd + mfw * zwd + mfh_grads + mfw_grads
+    trop_corr = mfh * zhd + mfw * zwd + mfh_grads + mfw_grads
 
-    trop_corr = mfh * zhd + mfw * zwd
-    mfw_grads = 0.0
+    # trop_corr = mfh * zhd + mfw * zwd
+    # mfw_grads = 0.0
 
     # trop_corr_mod = tropospheric_correction_vmf3(
     #     mfh=mfh,
