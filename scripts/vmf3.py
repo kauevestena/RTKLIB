@@ -5202,9 +5202,11 @@ def d2m_de2(a, b, c, cos_el, sin_el, el):
     d_func_value_den = denominator**2
     derivative_func_value = d_func_value_num / d_func_value_den
 
-    # Compute the second derivative (func2)
-    func2_value = -func_value + el * derivative_func_value
-    return func2_value
+    return derivative_func_value
+
+    # # Compute the second derivative (func2)
+    # func2_value = -func_value + el * derivative_func_value
+    # return func2_value
 
 
 def modified_tropospheric_correction_vmf3(
@@ -5222,24 +5224,24 @@ def modified_tropospheric_correction_vmf3(
     dmfwde = dm_de(aw, bw, cw, cos_el, sin_el)
 
     # re-computing gn and ge:
-    ge_h_orig = ge_h
-    ge_w_orig = ge_w
+    # ge_h_orig = ge_h
+    # ge_w_orig = ge_w
 
-    gn_h_orig = gn_h
-    gn_w_orig = gn_w
+    # gn_h_orig = gn_h
+    # gn_w_orig = gn_w
 
     # second order derivative:
-    dm2fhde2 = d2m_de2(ah, bh, ch, cos_el, sin_el, el)
-    dm2fwde2 = d2m_de2(aw, bw, cw, cos_el, sin_el, el)
+    # dm2fhde2 = d2m_de2(ah, bh, ch, cos_el, sin_el, el)
+    # dm2fwde2 = d2m_de2(aw, bw, cw, cos_el, sin_el, el)
 
-    cos2az = (cos_az**2) / 2
-    sin2az = (sin_az**2) / 2
+    # cos2az = (cos_az**2) / 2
+    # sin2az = (sin_az**2) / 2
 
-    ge_h = dmfhde * sin_az + dm2fhde2 * sin2az
-    ge_w = dmfwde * sin_az + dm2fwde2 * sin2az
+    ge_h = dmfhde * sin_az  # + dm2fhde2 * sin2az
+    ge_w = dmfwde * sin_az  # + dm2fwde2 * sin2az
 
-    gn_h = dmfhde * cos_az + dm2fhde2 * cos2az
-    gn_w = dmfwde * cos_az + dm2fwde2 * cos2az
+    gn_h = dmfhde * cos_az  # + dm2fhde2 * cos2az
+    gn_w = dmfwde * cos_az  # + dm2fwde2 * cos2az
 
     # logging.info(
     #     f"""
@@ -5264,14 +5266,16 @@ def modified_tropospheric_correction_vmf3(
 
     corr_w_p2 = dmfwde * gnw_mult
 
-    corr_h_p3 = dm2fhde2 * ((gnh_mult**2) / 2)
-    corr_w_p3 = dm2fwde2 * ((gnw_mult**2) / 2)
+    # corr_h_p3 = dm2fhde2 * ((gnh_mult**2) / 2)
+    # corr_w_p3 = dm2fwde2 * ((gnw_mult**2) / 2)
 
-    corr_h = corr_h_p1 + corr_h_p2 + corr_h_p3
+    corr_h = corr_h_p1 + corr_h_p2  # + corr_h_p3
 
-    corr_w = corr_w_p1 + corr_w_p2 + corr_w_p3
+    corr_w = corr_w_p1 + corr_w_p2  # + corr_w_p3
 
-    return corr_h + corr_w
+    corr_final = corr_h + corr_w
+
+    return corr_final, ge_h, gn_h, ge_w, gn_w
 
 
 # create argument parser
@@ -5385,7 +5389,7 @@ def process(data_as_str, station, delaypath):
     lon_rad = lon * DEG2RAD
 
     # mfh, mfw, bh, bw, ch, cw, el = vmf3_ht(ah, aw, mjd, lat, lon, h_ell, zd)
-    mfh, mfw, _, _, _, _, el, _ = vmf3_ht(
+    mfh, mfw, bh, bw, ch, cw, el, doy2 = vmf3_ht(
         mjd=mjd, lat=lat_rad, lon=lon_rad, h_ell=h_ell, zd=zd, ah=ah, aw=aw
     )
 
@@ -5396,15 +5400,46 @@ def process(data_as_str, station, delaypath):
     # checking/fixing delaypath:
     if not station.upper() in delaypath:
         part_of_the_year = "INVERNO" if doy > 180 else "VERAO"
-        delaypath = os.path.join(delaypath,part_of_the_year,station.upper(),"delays",f"{station.lower()}{floor(doy):03d}_delays.txt")
+        delaypath = os.path.join(
+            delaypath,
+            part_of_the_year,
+            station.upper(),
+            "delays",
+            f"{station.lower()}{floor(doy):03d}_delays.txt",
+        )
 
-    cos_az = cos(az)
-    sin_az = sin(az)
+    # cos_az = cos(az)
+    # sin_az = sin(az)
 
-    mfw_grads = mfw * (gn_w * cos_az + ge_w * sin_az)
-    mfh_grads = mfh * (gn_h * cos_az + ge_h * sin_az)
+    # mfw_grads = mfw * (gn_w * cos_az + ge_w * sin_az)
+    # mfh_grads = mfh * (gn_h * cos_az + ge_h * sin_az)
 
-    trop_corr = mfh * zhd + mfw * zwd + mfh_grads + mfw_grads
+    trop_corr_orig = mfh * zhd + mfw * zwd  # + mfh_grads + mfw_grads
+
+    # ge_h, gn_h, ge_w, gn_w
+    # mfh, mfw, ah, aw, bh, bw, ch, cw, el, az, zhd, zwd, gn_h, ge_h, gn_w, ge_w
+    trop_corr, ge_h_mod, gn_h_mod, ge_w_mod, gn_w_mod = (
+        modified_tropospheric_correction_vmf3(
+            mfh=mfh,
+            mfw=mfw,
+            ah=ah,
+            aw=aw,
+            bh=bh,
+            bw=bw,
+            ch=ch,
+            cw=cw,
+            el=el,
+            az=az,
+            zhd=zhd,
+            zwd=zwd,
+            gn_h=gn_h,
+            ge_h=ge_h,
+            gn_w=gn_w,
+            ge_w=ge_w,
+        )
+    )
+
+    mfw_grads = 0
 
     # trop_corr = mfh * zhd + mfw * zwd
     # mfw_grads = 0.0
@@ -5456,7 +5491,7 @@ def process(data_as_str, station, delaypath):
         # grad_e,grad_n,m_h,m_w_orig,m_w,zhd,zwd,x_0,x_1,x_2,tot_delay,epoch_s,mjd,az,el,zd,lat,lon,h_ell,ah,aw
 
         f.write(
-            f"{ge_h+ge_w:.6f},{gn_h+gn_w:.6f},{mfh:.6f},{mfw:.6f},{mfw_grads:.6f},{zhd:.6f},{zwd:.6f},0,0,0,{trop_corr:5f},{time},{mjd},{az*RAD2DEG},{el*RAD2DEG},{zd*RAD2DEG},{ah},{aw}\n"
+            f"{ge_h+ge_w:.6f},{gn_h+gn_w:.6f},{mfh:.6f},{mfw:.6f},{mfw_grads:.6f},{zhd:.6f},{zwd:.6f},0,0,0,{trop_corr:5f},{time},{mjd},{az*RAD2DEG},{el*RAD2DEG},{zd*RAD2DEG},{ah},{aw},{ge_h_mod + gn_h_mod:.6f},{ge_w_mod + gn_w_mod:.6f},{trop_corr_orig:5f},{doy},{doy2}\n"
         )
 
     return trop_corr
