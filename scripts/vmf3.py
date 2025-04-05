@@ -8,7 +8,7 @@ from interpolate_ah import *
 import numpy as np
 
 # import argparse, os
-from math import sin, cos
+from math import sin, cos, tan
 
 # import struct
 
@@ -5120,162 +5120,161 @@ def vmf3_ht(mjd=None, lat=None, lon=None, h_ell=None, zd=None, ah=None, aw=None)
     return mfh, mfw, bh, bw, ch, cw, el, doy
 
 
-def dm_de(a, b, c, cos_el, sin_el):
-    """
-    from wolfram alpha:
-    -(cos(z) - (a (cos(z) - (b cos(z))/(c + sin(z))^2))/(sin(z) + b/(c + sin(z)))^2)/(sin(z) + a/(sin(z) + b/(c + sin(z))))^2
+# def dm_de(a, b, c, cos_el, sin_el):
+#     """
+#     from wolfram alpha:
+#     -(cos(z) - (a (cos(z) - (b cos(z))/(c + sin(z))^2))/(sin(z) + b/(c + sin(z)))^2)/(sin(z) + a/(sin(z) + b/(c + sin(z))))^2
 
-    """
+#     """
 
-    temp1 = c + sin_el
-    temp2 = sin_el + b / temp1
-    temp3 = sin_el + a / temp2
-    denominator = temp3**2
+#     temp1 = c + sin_el
+#     temp2 = sin_el + b / temp1
+#     temp3 = sin_el + a / temp2
+#     denominator = temp3**2
 
-    temp4 = (b * cos_el) / (temp1**2)
-    temp5 = cos_el - temp4
-    temp6 = a * temp5
-    temp7 = temp2**2
-    temp8 = temp6 / temp7
-    numerator = -(cos_el - temp8)
+#     temp4 = (b * cos_el) / (temp1**2)
+#     temp5 = cos_el - temp4
+#     temp6 = a * temp5
+#     temp7 = temp2**2
+#     temp8 = temp6 / temp7
+#     numerator = -(cos_el - temp8)
 
-    return numerator / denominator
-
-
-def d2m_de2(a, b, c, cos_el, sin_el, el):
-    # Compute intermediate variables for the first derivative (func)
-    temp1 = c + sin_el
-    temp2 = sin_el + b / temp1
-    temp3 = sin_el + a / temp2
-    denominator = temp3**2
-
-    temp4 = (b * cos_el) / (temp1**2)
-    temp5 = cos_el - temp4
-    temp6 = a * temp5
-    temp7 = temp2**2
-    temp8 = temp6 / temp7
-    numerator = -(cos_el - temp8)
-
-    # Compute the first derivative (func)
-    func_value = numerator / denominator
-
-    # Now, compute derivatives of the intermediate variables
-    d_temp1 = cos_el  # derivative of temp1 w.r.t el
-
-    # Derivative of temp2
-    d_temp2_num = cos_el - (b * d_temp1) / (temp1**2)
-    d_temp2_den = 1
-    d_temp2 = d_temp2_num / d_temp2_den
-
-    # Derivative of temp3
-    d_temp3_num = cos_el - (a * d_temp2) / (temp2**2)
-    d_temp3_den = 1
-    d_temp3 = d_temp3_num / d_temp3_den
-
-    # Derivative of denominator
-    d_denominator = 2 * temp3 * d_temp3
-
-    # Derivative of temp4
-    d_temp4_num = -b * sin_el * (temp1**2) - 2 * b * cos_el * temp1 * d_temp1
-    d_temp4_den = temp1**4
-    d_temp4 = d_temp4_num / d_temp4_den
-
-    # Derivative of temp5
-    d_temp5 = -sin_el - d_temp4
-
-    # Derivative of temp6
-    d_temp6 = a * d_temp5
-
-    # Derivative of temp7
-    d_temp7 = 2 * temp2 * d_temp2
-
-    # Derivative of temp8
-    d_temp8_num = d_temp6 * temp7 - temp6 * d_temp7
-    d_temp8_den = temp7**2
-    d_temp8 = d_temp8_num / d_temp8_den
-
-    # Derivative of numerator
-    d_numerator = -(-sin_el - d_temp8)  # Derivative of - (cos_el - temp8)
-
-    # Derivative of func_value (first derivative)
-    d_func_value_num = d_numerator * denominator - numerator * d_denominator
-    d_func_value_den = denominator**2
-    derivative_func_value = d_func_value_num / d_func_value_den
-
-    return derivative_func_value
-
-    # # Compute the second derivative (func2)
-    # func2_value = -func_value + el * derivative_func_value
-    # return func2_value
+#     return numerator / denominator
 
 
-def modified_tropospheric_correction_vmf3(
-    mfh, mfw, ah, aw, bh, bw, ch, cw, el, az, zhd, zwd, gn_h, ge_h, gn_w, ge_w
-):
-    cos_el = cos(el)
-    sin_el = sin(el)
+# def d2m_de2(a, b, c, cos_el, sin_el, el):
+#     # Compute intermediate variables for the first derivative (func)
+#     temp1 = c + sin_el
+#     temp2 = sin_el + b / temp1
+#     temp3 = sin_el + a / temp2
+#     denominator = temp3**2
 
-    cos_az = cos(az)
-    sin_az = sin(az)
+#     temp4 = (b * cos_el) / (temp1**2)
+#     temp5 = cos_el - temp4
+#     temp6 = a * temp5
+#     temp7 = temp2**2
+#     temp8 = temp6 / temp7
+#     numerator = -(cos_el - temp8)
 
-    # # the mapping functions derivatives:
-    # first order derivative:
-    dmfhde = dm_de(ah, bh, ch, cos_el, sin_el)
-    dmfwde = dm_de(aw, bw, cw, cos_el, sin_el)
+#     # Compute the first derivative (func)
+#     func_value = numerator / denominator
 
-    # re-computing gn and ge:
-    # ge_h_orig = ge_h
-    # ge_w_orig = ge_w
+#     # Now, compute derivatives of the intermediate variables
+#     d_temp1 = cos_el  # derivative of temp1 w.r.t el
 
-    # gn_h_orig = gn_h
-    # gn_w_orig = gn_w
+#     # Derivative of temp2
+#     d_temp2_num = cos_el - (b * d_temp1) / (temp1**2)
+#     d_temp2_den = 1
+#     d_temp2 = d_temp2_num / d_temp2_den
 
-    # second order derivative:
-    # dm2fhde2 = d2m_de2(ah, bh, ch, cos_el, sin_el, el)
-    # dm2fwde2 = d2m_de2(aw, bw, cw, cos_el, sin_el, el)
+#     # Derivative of temp3
+#     d_temp3_num = cos_el - (a * d_temp2) / (temp2**2)
+#     d_temp3_den = 1
+#     d_temp3 = d_temp3_num / d_temp3_den
 
-    # cos2az = (cos_az**2) / 2
-    # sin2az = (sin_az**2) / 2
+#     # Derivative of denominator
+#     d_denominator = 2 * temp3 * d_temp3
 
-    ge_h = dmfhde * sin_az  # + dm2fhde2 * sin2az
-    ge_w = dmfwde * sin_az  # + dm2fwde2 * sin2az
+#     # Derivative of temp4
+#     d_temp4_num = -b * sin_el * (temp1**2) - 2 * b * cos_el * temp1 * d_temp1
+#     d_temp4_den = temp1**4
+#     d_temp4 = d_temp4_num / d_temp4_den
 
-    gn_h = dmfhde * cos_az  # + dm2fhde2 * cos2az
-    gn_w = dmfwde * cos_az  # + dm2fwde2 * cos2az
+#     # Derivative of temp5
+#     d_temp5 = -sin_el - d_temp4
 
-    # logging.info(
-    #     f"""
-    # 	v1	c1	c2
-    # ge_h	{ge_h_orig}	{ge_h}	{ge_h*mfh}
-    # ge_w	{ge_w_orig}	{ge_w}	{ge_w*mfw}
-    # gn_h	{gn_h_orig}	{gn_h}	{gn_h*mfh}
-    # gn_w	{gn_w_orig}	{gn_w}	{gn_w*mfw}
-    #              """
-    # )
+#     # Derivative of temp6
+#     d_temp6 = a * d_temp5
 
-    # tropospheric correction:
-    # m_h_vmf * zhd + m_w_vmf * (x[0] - zhd)
-    corr_h_p1 = mfh * zhd
+#     # Derivative of temp7
+#     d_temp7 = 2 * temp2 * d_temp2
 
-    corr_w_p1 = mfw * zwd
+#     # Derivative of temp8
+#     d_temp8_num = d_temp6 * temp7 - temp6 * d_temp7
+#     d_temp8_den = temp7**2
+#     d_temp8 = d_temp8_num / d_temp8_den
 
-    gnh_mult = gn_h * cos_az + ge_h * sin_az
-    gnw_mult = gn_w * cos_az + ge_w * sin_az
+#     # Derivative of numerator
+#     d_numerator = -(-sin_el - d_temp8)  # Derivative of - (cos_el - temp8)
 
-    corr_h_p2 = dmfhde * gnh_mult
+#     # Derivative of func_value (first derivative)
+#     d_func_value_num = d_numerator * denominator - numerator * d_denominator
+#     d_func_value_den = denominator**2
+#     derivative_func_value = d_func_value_num / d_func_value_den
 
-    corr_w_p2 = dmfwde * gnw_mult
+#     return derivative_func_value
 
-    # corr_h_p3 = dm2fhde2 * ((gnh_mult**2) / 2)
-    # corr_w_p3 = dm2fwde2 * ((gnw_mult**2) / 2)
+#     # # Compute the second derivative (func2)
+#     # func2_value = -func_value + el * derivative_func_value
+#     # return func2_value
 
-    corr_h = corr_h_p1 + corr_h_p2  # + corr_h_p3
 
-    corr_w = corr_w_p1 + corr_w_p2  # + corr_w_p3
+# def modified_tropospheric_correction_vmf3(
+#     mfh, mfw, ah, aw, bh, bw, ch, cw, el, az, zhd, zwd, gn_h, ge_h, gn_w, ge_w
+# ):
+#     cos_el = cos(el)
+#     sin_el = sin(el)
 
-    corr_final = corr_h + corr_w
+#     cos_az = cos(az)
+#     sin_az = sin(az)
 
-    return corr_final, ge_h, gn_h, ge_w, gn_w
+#     # # the mapping functions derivatives:
+#     # first order derivative:
+#     dmfhde = dm_de(ah, bh, ch, cos_el, sin_el)
+#     dmfwde = dm_de(aw, bw, cw, cos_el, sin_el)
+
+#     # re-computing gn and ge:
+#     # ge_h_orig = ge_h
+#     # ge_w_orig = ge_w
+#     # gn_h_orig = gn_h
+#     # gn_w_orig = gn_w
+
+#     # second order derivative:
+#     # dm2fhde2 = d2m_de2(ah, bh, ch, cos_el, sin_el, el)
+#     # dm2fwde2 = d2m_de2(aw, bw, cw, cos_el, sin_el, el)
+
+#     # cos2az = (cos_az**2) / 2
+#     # sin2az = (sin_az**2) / 2
+
+#     ge_h = dmfhde * sin_az  # + dm2fhde2 * sin2az
+#     ge_w = dmfwde * sin_az  # + dm2fwde2 * sin2az
+
+#     gn_h = dmfhde * cos_az  # + dm2fhde2 * cos2az
+#     gn_w = dmfwde * cos_az  # + dm2fwde2 * cos2az
+
+#     # logging.info(
+#     #     f"""
+#     # 	v1	c1	c2
+#     # ge_h	{ge_h_orig}	{ge_h}	{ge_h*mfh}
+#     # ge_w	{ge_w_orig}	{ge_w}	{ge_w*mfw}
+#     # gn_h	{gn_h_orig}	{gn_h}	{gn_h*mfh}
+#     # gn_w	{gn_w_orig}	{gn_w}	{gn_w*mfw}
+#     #              """
+#     # )
+
+#     # tropospheric correction:
+#     # m_h_vmf * zhd + m_w_vmf * (x[0] - zhd)
+#     corr_h_p1 = mfh * zhd
+
+#     corr_w_p1 = mfw * zwd
+
+#     gnh_mult = gn_h * cos_az + ge_h * sin_az
+#     gnw_mult = gn_w * cos_az + ge_w * sin_az
+
+#     corr_h_p2 = dmfhde * gnh_mult
+
+#     corr_w_p2 = dmfwde * gnw_mult
+
+#     # corr_h_p3 = dm2fhde2 * ((gnh_mult**2) / 2)
+#     # corr_w_p3 = dm2fwde2 * ((gnw_mult**2) / 2)
+
+#     corr_h = corr_h_p1 + corr_h_p2  # + corr_h_p3
+
+#     corr_w = corr_w_p1 + corr_w_p2  # + corr_w_p3
+
+#     corr_final = corr_h + corr_w
+
+#     return corr_final, ge_h, gn_h, ge_w, gn_w
 
 
 # create argument parser
@@ -5354,6 +5353,99 @@ def modified_tropospheric_correction_vmf3(
 # ah, aw, mjd, lat, lon, h_ell, zd, az, gn_h, ge_h, gn_w, ge_w
 
 
+def calcular_derivadas_mapeamento(a, b, c, el):
+    """
+    Calcula a primeira e segunda derivadas da função de mapeamento VMF3
+    Retorna: (primeira_derivada, segunda_derivada)
+    """
+    sin_el = sin(el)
+    cos_el = cos(el)
+
+    # Termos intermediários
+    temp1 = sin_el + c
+    temp2 = sin_el + b / temp1
+    temp3 = sin_el + a / temp2
+
+    # Primeira derivada
+    term4 = (b * cos_el) / (temp1**2)
+    term5 = cos_el - term4
+    term6 = a * term5
+    term7 = temp2**2
+    term8 = term6 / term7
+    primeira_derivada = -(cos_el - term8) / (temp3**2)
+
+    # Segunda derivada (cálculo simplificado)
+    d_temp1 = cos_el
+    d_temp2 = cos_el - (b * d_temp1) / (temp1**2)
+    d_temp3 = cos_el - (a * d_temp2) / (temp2**2)
+
+    d_term4 = (-b * sin_el * (temp1 * 2) - 2 * b * cos_el * temp1 * d_temp1) / (
+        temp1 * 4
+    )
+    d_term5 = -sin_el - d_term4
+    d_term6 = a * d_term5
+    d_term7 = 2 * temp2 * d_temp2
+    d_term8 = (d_term6 * term7 - term6 * d_term7) / (
+        term7**2
+    )  # Corrigido: term7 em vez de temp7
+
+    d_numerador = -(-sin_el - d_term8)
+    d_denominador = 2 * temp3 * d_temp3
+
+    segunda_derivada = (
+        d_numerador * (temp3 * 2) - (-(cos_el - term8)) * d_denominador
+    ) / (temp3 * 4)
+
+    return primeira_derivada, segunda_derivada
+
+
+def novo_modelo_troposferico(
+    mjd, lat, lon, h_ell, zd, az, ah, aw, zhd, zwd, gn_h, ge_h, gn_w, ge_w
+):
+    """
+    Novo modelo combinado de atraso troposférico com:
+    - VMF3 para mapeamento zenital
+    - Chen & Herring para gradientes
+    - Termos de segunda ordem
+
+    Parâmetros em radianos onde aplicável
+    """
+    # 1. Calcula as funções de mapeamento VMF3 básicas
+    mfh, mfw, bh, bw, ch, cw, el, doy = vmf3_ht(mjd, lat, lon, h_ell, zd, ah, aw)
+
+    # 2. Calcula derivadas
+    dmfh_de, d2mfh_de2 = calcular_derivadas_mapeamento(ah, bh, ch, el)
+    dmfw_de, d2mfw_de2 = calcular_derivadas_mapeamento(aw, bw, cw, el)
+
+    # 3. Termos de gradiente (Chen & Herring)
+    cotz = 1.0 / tan(el)
+    mh_grad = cotz * mfh
+    mw_grad = cotz * mfw
+
+    # Componentes dos gradientes
+    cos_az = cos(az)
+    sin_az = sin(az)
+
+    grad_n = gn_h * mh_grad + gn_w * mw_grad
+    grad_e = ge_h * mh_grad + ge_w * mw_grad
+    termo_gradiente = grad_n * cos_az + grad_e * sin_az
+
+    # 4. Termos de segunda ordem
+    termo_seg_ordem_h = 0.5 * d2mfh_de2 * (gn_h**2 + ge_h**2) * zhd
+    termo_seg_ordem_w = 0.5 * d2mfw_de2 * (gn_w**2 + ge_w**2) * zwd
+
+    # 5. Atraso total
+    atraso_total = (
+        mfh * zhd + mfw * zwd + termo_gradiente + termo_seg_ordem_h + termo_seg_ordem_w
+    )
+
+    # 6. Gradientes modificados (opcional)
+    grad_n_mod = dmfh_de * gn_h + dmfw_de * gn_w
+    grad_e_mod = dmfh_de * ge_h + dmfw_de * ge_w
+
+    return atraso_total, grad_n_mod, grad_e_mod, grad_n, grad_e
+
+
 def process(data_as_str, station, delaypath):
     # station = os.environ["CURRENT_STATION"]
 
@@ -5418,25 +5510,43 @@ def process(data_as_str, station, delaypath):
 
     # ge_h, gn_h, ge_w, gn_w
     # mfh, mfw, ah, aw, bh, bw, ch, cw, el, az, zhd, zwd, gn_h, ge_h, gn_w, ge_w
-    trop_corr, ge_h_mod, gn_h_mod, ge_w_mod, gn_w_mod = (
-        modified_tropospheric_correction_vmf3(
-            mfh=mfh,
-            mfw=mfw,
-            ah=ah,
-            aw=aw,
-            bh=bh,
-            bw=bw,
-            ch=ch,
-            cw=cw,
-            el=el,
-            az=az,
-            zhd=zhd,
-            zwd=zwd,
-            gn_h=gn_h,
-            ge_h=ge_h,
-            gn_w=gn_w,
-            ge_w=ge_w,
-        )
+    # trop_corr, ge_h_mod, gn_h_mod, ge_w_mod, gn_w_mod = (
+    #     modified_tropospheric_correction_vmf3(
+    #         mfh=mfh,
+    #         mfw=mfw,
+    #         ah=ah,
+    #         aw=aw,
+    #         bh=bh,
+    #         bw=bw,
+    #         ch=ch,
+    #         cw=cw,
+    #         el=el,
+    #         az=az,
+    #         zhd=zhd,
+    #         zwd=zwd,
+    #         gn_h=gn_h,
+    #         ge_h=ge_h,
+    #         gn_w=gn_w,
+    #         ge_w=ge_w,
+    #     )
+    # )
+
+    trop_corr, gn_mod, ge_mod, gn, ge = novo_modelo_troposferico(
+        # mjd, lat_rad, lon_rad, h_ell, zd, az, ah, aw, zhd, zwd, gn_h, ge_h, gn_w, ge_w
+        mjd=mjd,
+        lat=lat_rad,
+        lon=lon_rad,
+        h_ell=h_ell,
+        zd=zd,
+        az=az,
+        ah=ah,
+        aw=aw,
+        zhd=zhd,
+        zwd=zwd,
+        gn_h=gn_h,
+        ge_h=ge_h,
+        gn_w=gn_w,
+        ge_w=ge_w,
     )
 
     mfw_grads = 0
@@ -5491,7 +5601,7 @@ def process(data_as_str, station, delaypath):
         # grad_e,grad_n,m_h,m_w_orig,m_w,zhd,zwd,x_0,x_1,x_2,tot_delay,epoch_s,mjd,az,el,zd,lat,lon,h_ell,ah,aw
 
         f.write(
-            f"{ge_h+ge_w:.6f},{gn_h+gn_w:.6f},{mfh:.6f},{mfw:.6f},{mfw_grads:.6f},{zhd:.6f},{zwd:.6f},0,0,0,{trop_corr:5f},{time},{mjd},{az*RAD2DEG},{el*RAD2DEG},{zd*RAD2DEG},{ah},{aw},{ge_h_mod + gn_h_mod:.6f},{ge_w_mod + gn_w_mod:.6f},{trop_corr_orig:5f},{doy},{doy2}\n"
+            f"{ge:.6f},{gn:.6f},{mfh:.6f},{mfw:.6f},{mfw_grads:.6f},{zhd:.6f},{zwd:.6f},0,0,0,{trop_corr:5f},{time},{mjd},{az*RAD2DEG},{el*RAD2DEG},{zd*RAD2DEG},{ah},{aw},{gn_mod:.6f},{ge_mod:.6f},{trop_corr_orig:5f},{doy},{doy2}\n"
         )
 
     return trop_corr
