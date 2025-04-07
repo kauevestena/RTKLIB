@@ -5098,6 +5098,12 @@ def vmf3_ht(mjd=None, lat=None, lon=None, h_ell=None, zd=None, ah=None, aw=None)
         + cw_A2 * np.cos(doy / 365.25 * 4 * np.pi)
         + cw_B2 * np.sin(doy / 365.25 * 4 * np.pi)
     )
+
+    # fixing the coefficients:
+    ah,bh,ch = ajustar_coeficientes_vmf3(ah, bh, ch, lat)
+    aw,bw,cw = ajustar_coeficientes_vmf3(aw, bw, cw, lat)
+
+
     # calculating the hydrostatic and wet mapping factors
     mfh = (1 + (ah / (1 + bh / (1 + ch)))) / (
         np.sin(el) + (ah / (np.sin(el) + bh / (np.sin(el) + ch)))
@@ -5353,52 +5359,6 @@ def vmf3_ht(mjd=None, lat=None, lon=None, h_ell=None, zd=None, ah=None, aw=None)
 # ah, aw, mjd, lat, lon, h_ell, zd, az, gn_h, ge_h, gn_w, ge_w
 
 
-def calcular_derivadas_mapeamento(a, b, c, el):
-    """
-    Calcula a primeira e segunda derivadas da função de mapeamento VMF3
-    Retorna: (primeira_derivada, segunda_derivada)
-    """
-    sin_el = sin(el)
-    cos_el = cos(el)
-
-    # Termos intermediários
-    temp1 = sin_el + c
-    temp2 = sin_el + b / temp1
-    temp3 = sin_el + a / temp2
-
-    # Primeira derivada
-    term4 = (b * cos_el) / (temp1**2)
-    term5 = cos_el - term4
-    term6 = a * term5
-    term7 = temp2**2
-    term8 = term6 / term7
-    primeira_derivada = -(cos_el - term8) / (temp3**2)
-
-    # Segunda derivada (cálculo simplificado)
-    d_temp1 = cos_el
-    d_temp2 = cos_el - (b * d_temp1) / (temp1**2)
-    d_temp3 = cos_el - (a * d_temp2) / (temp2**2)
-
-    d_term4 = (-b * sin_el * (temp1 * 2) - 2 * b * cos_el * temp1 * d_temp1) / (
-        temp1 * 4
-    )
-    d_term5 = -sin_el - d_term4
-    d_term6 = a * d_term5
-    d_term7 = 2 * temp2 * d_temp2
-    d_term8 = (d_term6 * term7 - term6 * d_term7) / (
-        term7**2
-    )  # Corrigido: term7 em vez de temp7
-
-    d_numerador = -(-sin_el - d_term8)
-    d_denominador = 2 * temp3 * d_temp3
-
-    segunda_derivada = (
-        d_numerador * (temp3 * 2) - (-(cos_el - term8)) * d_denominador
-    ) / (temp3 * 4)
-
-    return primeira_derivada, segunda_derivada
-
-
 def termo_umidade_tropical(zwd, el, lat):
     """
     Adiciona correção para alta umidade em baixas latitudes
@@ -5457,91 +5417,6 @@ def gradientes_brasil(gn_h, ge_h, gn_w, ge_w, lat, mjd):
     )
 
 
-def novo_modelo_troposferico_brasil(
-    mjd,
-    lat,
-    lon,
-    h_ell,
-    zd,
-    az,
-    ah,
-    aw,
-    zhd,
-    zwd,
-    gn_h,
-    ge_h,
-    gn_w,
-    ge_w,
-    bh,
-    ch,
-    bw,
-    cw,
-):
-    """
-    Modelo adaptado para o Brasil usando parâmetros do VMF3 com melhorias regionais
-    """
-    el = pi / 2 - zd
-
-    # 1. Ajustar coeficientes do VMF3 para latitudes brasileiras
-    ah_ajust, bh_ajust, ch_ajust = ajustar_coeficientes_vmf3(ah, bh, ch, lat)
-    aw_ajust, bw_ajust, cw_ajust = ajustar_coeficientes_vmf3(aw, bw, cw, lat)
-
-    # 2. Calcular mapeamentos com coeficientes ajustados
-    mfh = 1.0 / (sin(el) + ah_ajust / (sin(el) + bh_ajust / (sin(el) + ch_ajust)))
-    mfw = 1.0 / (sin(el) + aw_ajust / (sin(el) + bw_ajust / (sin(el) + cw_ajust)))
-
-    # 3. Calcular derivadas para termos de segunda ordem
-    dmfh_de, d2mfh_de2 = calcular_derivadas_mapeamento(ah_ajust, bh_ajust, ch_ajust, el)
-    dmfw_de, d2mfw_de2 = calcular_derivadas_mapeamento(aw_ajust, bw_ajust, cw_ajust, el)
-
-    # 4. Ajustar gradientes para condições brasileiras
-    gn_h_ajust, ge_h_ajust, gn_w_ajust, ge_w_ajust = gradientes_brasil(
-        gn_h, ge_h, gn_w, ge_w, lat, mjd
-    )
-
-    # 5. Termos de gradiente (Chen & Herring modificado)
-    cotz = 1.0 / tan(el)
-    mh_grad = cotz * mfh
-    mw_grad = cotz * mfw
-
-    cos_az = cos(az)
-    sin_az = sin(az)
-
-    termo_gradiente = (gn_h_ajust * cos_az + ge_h_ajust * sin_az) * mh_grad + (
-        gn_w_ajust * cos_az + ge_w_ajust * sin_az
-    ) * mw_grad
-
-    # 6. Termos de segunda ordem
-    termo_seg_ordem_h = 0.5 * d2mfh_de2 * (gn_h_ajust**2 + ge_h_ajust**2) * zhd
-    termo_seg_ordem_w = 0.5 * d2mfw_de2 * (gn_w_ajust**2 + ge_w_ajust**2) * zwd
-
-    # 7. Adicionar termo de umidade tropical
-    termo_umidade = termo_umidade_tropical(zwd, el, lat)
-
-    # 8. Atraso total
-    atraso_total = (
-        mfh * zhd
-        + mfw * zwd
-        + termo_gradiente
-        + termo_seg_ordem_h
-        + termo_seg_ordem_w
-        + termo_umidade
-    )
-
-    # 9. Gradientes modificados
-    grad_n_mod = dmfh_de * gn_h_ajust + dmfw_de * gn_w_ajust
-    grad_e_mod = dmfh_de * ge_h_ajust + dmfw_de * ge_w_ajust
-
-    return (
-        atraso_total,
-        grad_n_mod,
-        grad_e_mod,
-        gn_h_ajust,
-        ge_h_ajust,
-        gn_w_ajust,
-        ge_w_ajust,
-    )
-
 
 def process(data_as_str, station, delaypath):
     # station = os.environ["CURRENT_STATION"]
@@ -5570,12 +5445,18 @@ def process(data_as_str, station, delaypath):
     # h_ell = ah_params["alt"]
 
     # new order: LAT LON ALT AH AW ZHD ZWD GN_H GE_H GN_W GE_W
+
     lat, lon, h_ell, ah, aw, zhd, zwd, gn_h, ge_h, gn_w, ge_w = interpolate_ah(
         station, time
     )
-
+    
     lat_rad = lat * DEG2RAD
     lon_rad = lon * DEG2RAD
+
+    gn_h, ge_h, gn_w,ge_w =  gradientes_brasil(gn_h=gn_h, ge_h=ge_h, gn_w=gn_w, ge_w=ge_w,   lat=lat_rad, mjd=mjd)
+
+    # zwd correction
+    zwd = termo_umidade_tropical(zwd, el, lat_rad)
 
     # mfh, mfw, bh, bw, ch, cw, el = vmf3_ht(ah, aw, mjd, lat, lon, h_ell, zd)
     mfh, mfw, bh, bw, ch, cw, el, doy2 = vmf3_ht(
@@ -5628,29 +5509,37 @@ def process(data_as_str, station, delaypath):
     #     )
     # )
 
-    trop_corr, gn_mod, ge_mod, gn_h_ajust, ge_h_ajust, gn_w_ajust, ge_w_ajust = (
-        novo_modelo_troposferico_brasil(
-            # mjd, lat_rad, lon_rad, h_ell, zd, az, ah, aw, zhd, zwd, gn_h, ge_h, gn_w, ge_w
-            mjd=mjd,
-            lat=lat_rad,
-            lon=lon_rad,
-            h_ell=h_ell,
-            zd=zd,
-            az=az,
-            ah=ah,
-            aw=aw,
-            zhd=zhd,
-            zwd=zwd,
-            gn_h=gn_h,
-            ge_h=ge_h,
-            gn_w=gn_w,
-            ge_w=ge_w,
-            bh=bh,
-            ch=ch,
-            bw=bw,
-            cw=cw,
-        )
-    )
+    # trop_corr, gn_mod, ge_mod, gn_h_ajust, ge_h_ajust, gn_w_ajust, ge_w_ajust = (
+    #     novo_modelo_troposferico_brasil(
+    #         # mjd, lat_rad, lon_rad, h_ell, zd, az, ah, aw, zhd, zwd, gn_h, ge_h, gn_w, ge_w
+    #         mjd=mjd,
+    #         lat=lat_rad,
+    #         lon=lon_rad,
+    #         h_ell=h_ell,
+    #         zd=zd,
+    #         az=az,
+    #         ah=ah,
+    #         aw=aw,
+    #         zhd=zhd,
+    #         zwd=zwd,
+    #         gn_h=gn_h,
+    #         ge_h=ge_h,
+    #         gn_w=gn_w,
+    #         ge_w=ge_w,
+    #         bh=bh,
+    #         ch=ch,
+    #         bw=bw,
+    #         cw=cw,
+    #     )
+    # )
+
+    cos_az = cos(az)
+    sin_az = sin(az)
+
+    mfw_grads = mfw * (gn_w * cos_az + ge_w * sin_az)
+    mfh_grads = mfh * (gn_h * cos_az + ge_h * sin_az)
+
+    trop_corr = mfh * zhd + mfw * zwd + mfh_grads + mfw_grads
 
     mfw_grads = 0
 
@@ -5704,7 +5593,7 @@ def process(data_as_str, station, delaypath):
         # grad_e,grad_n,m_h,m_w_orig,m_w,zhd,zwd,x_0,x_1,x_2,tot_delay,epoch_s,mjd,az,el,zd,lat,lon,h_ell,ah,aw
 
         f.write(
-            f"{ge_h_ajust+ge_w_ajust:.6f},{gn_h_ajust+gn_w_ajust:.6f},{mfh:.6f},{mfw:.6f},{mfw_grads:.6f},{zhd:.6f},{zwd:.6f},0,0,0,{trop_corr:5f},{time},{mjd},{az*RAD2DEG},{el*RAD2DEG},{zd*RAD2DEG},{ah},{aw},{gn_mod:.6f},{ge_mod:.6f},{trop_corr_orig:5f},{doy},{doy2}\n"
+            f"{ge_h+ge_w:.6f},{gn_h+gn_w:.6f},{mfh:.6f},{mfw:.6f},{mfw_grads:.6f},{zhd:.6f},{zwd:.6f},0,0,0,{trop_corr:5f},{time},{mjd},{az*RAD2DEG},{el*RAD2DEG},{zd*RAD2DEG},{ah},{aw},{ge_h:.6f},{gn_h:.6f},{trop_corr_orig:5f},{doy},{doy2}\n"
         )
 
     return trop_corr
