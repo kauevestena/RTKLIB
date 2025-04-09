@@ -5376,6 +5376,10 @@ def ajustar_coeficientes_vmf3(a, b, c, lat):
     """
     Ajusta os coeficientes do VMF3 para latitudes brasileiras
     """
+
+    # converter para graus:
+    lat = lat * RAD2DEG
+
     # Fator de correção latitudinal (empírico para o Brasil)
     lat_factor = 1.0 + 0.05 * np.sin(2 * lat)
 
