@@ -5100,8 +5100,8 @@ def vmf3_ht(mjd=None, lat=None, lon=None, h_ell=None, zd=None, ah=None, aw=None)
     )
 
     # fixing the coefficients:
-    ah,bh,ch = ajustar_coeficientes_vmf3(ah, bh, ch, lat)
-    aw,bw,cw = ajustar_coeficientes_vmf3(aw, bw, cw, lat)
+    # ah,bh,ch = ajustar_coeficientes_vmf3(ah, bh, ch, lat)
+    # aw,bw,cw = ajustar_coeficientes_vmf3(aw, bw, cw, lat)
 
 
     # calculating the hydrostatic and wet mapping factors
@@ -5460,7 +5460,7 @@ def process(data_as_str, station, delaypath):
     gn_h, ge_h, gn_w,ge_w =  gradientes_brasil(gn_h=gn_h, ge_h=ge_h, gn_w=gn_w, ge_w=ge_w,   lat=lat_rad, mjd=mjd)
 
     # zwd correction
-    zwd = termo_umidade_tropical(zwd, el, lat_rad)
+    # zwd = termo_umidade_tropical(zwd, el, lat_rad)
 
     # mfh, mfw, bh, bw, ch, cw, el = vmf3_ht(ah, aw, mjd, lat, lon, h_ell, zd)
     mfh, mfw, bh, bw, ch, cw, el, doy2 = vmf3_ht(
