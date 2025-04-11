@@ -3,7 +3,7 @@ import time, os
 import ntpath
 from tqdm import tqdm
 
-N_PROCESSES = 8
+N_PROCESSES = 1
 
 try:
     from scripts.lib import *
