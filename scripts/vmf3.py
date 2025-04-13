@@ -5500,13 +5500,13 @@ def process(data_as_str, station, delaypath):
             f"{station.lower()}{floor(doy):03d}_delays.txt",
         )
 
-    # cos_az = cos(az)
-    # sin_az = sin(az)
+    cos_az = cos(az)
+    sin_az = sin(az)
 
-    # mfw_grads = mfw * (gn_w * cos_az + ge_w * sin_az)
-    # mfh_grads = mfh * (gn_h * cos_az + ge_h * sin_az)
+    mfw_grads = mfw * (gn_w * cos_az + ge_w * sin_az)
+    mfh_grads = mfh * (gn_h * cos_az + ge_h * sin_az)
 
-    trop_corr_orig = mfh * zhd + mfw * zwd  # + mfh_grads + mfw_grads
+    trop_corr_orig = mfh * zhd + mfw * zwd + mfh_grads + mfw_grads
 
     # ge_h, gn_h, ge_w, gn_w
     # mfh, mfw, ah, aw, bh, bw, ch, cw, el, az, zhd, zwd, gn_h, ge_h, gn_w, ge_w

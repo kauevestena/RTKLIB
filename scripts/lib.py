@@ -16,7 +16,7 @@ from time import sleep
 from datetime import datetime, timezone, date
 
 # TO MODIFY:
-proc_scenario = "mod_vmf3_grads_lat_br"
+proc_scenario = "mod_vmf3_grads"
 
 # other constants:
 
