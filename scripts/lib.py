@@ -16,7 +16,7 @@ from time import sleep
 from datetime import datetime, timezone, date
 
 # TO MODIFY:
-proc_scenario = "vmf3_nograd_test"
+proc_scenario = "vmf3_grads_test"
 
 # other constants:
 
@@ -40,8 +40,8 @@ proc_sc_root = {
     "vmf3_grads": os.path.join(outputs_path, "vmf3_grads"),
     "vmf3_nograd": os.path.join(outputs_path, "vmf3_nograd"),
     "mod_vmf3_grads": os.path.join(outputs_path, "mod_vmf3_grads"),
-    "vmf3_grads_test" : os.path.join(outputs_path, "vmf3_grads_test"),
-    "vmf3_nograd_test" : os.path.join(outputs_path, "vmf3_nograd_test"),
+    "vmf3_grads_test": os.path.join(outputs_path, "vmf3_grads_test"),
+    "vmf3_nograd_test": os.path.join(outputs_path, "vmf3_nograd_test"),
     # "mod_vmf3_ztd_orig": os.path.join(outputs_path, "mod_vmf3_ztd_orig"),
 }
 
@@ -510,6 +510,7 @@ def send_environ(key, host="127.0.0.1", port=5001):
         # don't be forgiving, raise the error:
         raise e
 
+
 def parallel_exec(iterable, exec_func, num_processes, timeout=None):
     """
     Execute a function in parallel over an iterable using a process pool
@@ -548,6 +549,7 @@ def parallel_exec(iterable, exec_func, num_processes, timeout=None):
 
     return results
 
+
 def read_file_as_list(file_path):
     """
     Read a text file and return its contents as a list of lines.
@@ -564,6 +566,7 @@ def read_file_as_list(file_path):
         with open(file_path, "r") as file:
             return file.readlines()
 
+
 def write_list_to_file(data_list, file_path):
     """
     Write a list of strings to a text file.
@@ -576,10 +579,12 @@ def write_list_to_file(data_list, file_path):
         for line in data_list:
             file.write(line + "\n")
 
+
 # set the environment variables that are going to be called on the C program:
 os.environ["PYTHONPATH_RTKLIB"] = python_path = "/home/RTKLIB/.venv/bin/python"
 # os.environ["AH_SCRIPT_PATH"] = ah_path = "/home/RTKLIB/scripts/interpolate_ah.py"
 os.environ["VMF3_PATH"] = vmf3_path = "/home/RTKLIB/scripts/processing_server4.py"
+
 
 def launch_proc_server(gui=True):
     """
@@ -589,20 +594,29 @@ def launch_proc_server(gui=True):
     if gui:
         subprocess.run(f'xterm -hold -e "bash -c {inner_command}"', shell=True)
     else:
-        subprocess.Popen(inner_command.strip("'"), shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        subprocess.Popen(
+            inner_command.strip("'"),
+            shell=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
     logging.info("Server Lauch script executed, sleeping for 5 seconds")
     sleep(5)
 
-# creating some dirs:
-create_dir('scripts/logs')
 
-def append_to_file(filepath, message='',extra="\n"):
+# creating some dirs:
+create_dir("scripts/logs")
+
+
+def append_to_file(filepath, message="", extra="\n"):
     with open(filepath, "a") as f:
         f.write(message + extra)
+
 
 def remove_if_exists(filepath):
     if os.path.exists(filepath):
         os.remove(filepath)
+
 
 def dirpath(filepath):
     """
@@ -616,6 +630,7 @@ def dirpath(filepath):
     """
     return os.path.dirname(filepath)
 
+
 def filename(filepath):
     """
     Returns the filename portion of the provided filepath.
@@ -627,6 +642,7 @@ def filename(filepath):
         str: The filename portion of the filepath.
     """
     return os.path.basename(filepath)
+
 
 def clean_unfinished_outputs(calls_list):
     outlist = []
@@ -645,24 +661,22 @@ def clean_unfinished_outputs(calls_list):
 
             pos_filename = filename(pos_path)
 
-            delays_dirpath = os.path.join(dirpath(pos_dirpath),'delays')
+            delays_dirpath = os.path.join(dirpath(pos_dirpath), "delays")
 
-            doy = pos_filename.split('_')[0][-4:-1]
+            doy = pos_filename.split("_")[0][-4:-1]
 
             delaypaths = [f for f in os.listdir(delays_dirpath) if doy in f]
 
             if delaypaths:
                 for delaypath in delaypaths:
-                    delaypath_full = os.path.join(delays_dirpath,delaypath)
+                    delaypath_full = os.path.join(delays_dirpath, delaypath)
 
                     remove_file_if_exists(delaypath_full)
-
 
             # cleansing:
             remove_file_if_exists(pos_path)
 
         else:
             logging.info(f"skipping already done call: {call}")
-
 
     return outlist

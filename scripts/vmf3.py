@@ -5396,17 +5396,47 @@ def process(data_as_str, station, delaypath):
     # checking/fixing delaypath:
     if not station.upper() in delaypath:
         part_of_the_year = "INVERNO" if doy > 180 else "VERAO"
-        delaypath = os.path.join(delaypath,part_of_the_year,station.upper(),"delays",f"{station.lower()}{floor(doy):03d}_delays.txt")
+        delaypath = os.path.join(
+            delaypath,
+            part_of_the_year,
+            station.upper(),
+            "delays",
+            f"{station.lower()}{floor(doy):03d}_delays.txt",
+        )
+
+    # logging.info(f"Az: {az}, zd: {zd}, el: {el}")
 
     cos_az = cos(az)
     sin_az = sin(az)
 
+    # converting the gradients to meters (currently in mm):
+    gn_h = gn_h / 1000
+    ge_h = ge_h / 1000
+    gn_w = gn_w / 1000
+    ge_w = ge_w / 1000
+
     mfw_grads = mfw * (gn_w * cos_az + ge_w * sin_az)
     mfh_grads = mfh * (gn_h * cos_az + ge_h * sin_az)
 
-    # trop_corr = mfh * zhd + mfw * zwd + mfh_grads + mfw_grads
+    trop_corr = mfh * zhd + mfw * zwd + mfh_grads + mfw_grads
 
-    trop_corr = mfh * zhd + mfw * zwd + mfw_grads
+    # trop_corr = mfh * zhd + mfw * zwd + mfw_grads
+
+    # logging.info(
+    #     f"""
+    # mfh: {mfh:.6f}
+    # mfw: {mfw:.6f}
+    # mfh_grads: {mfh_grads:.6f}
+    # mfw_grads: {mfw_grads:.6f}
+    # gn_h: {gn_h:.6f}
+    # ge_h: {ge_h:.6f}
+    # gn_w: {gn_w:.6f}
+    # ge_w: {ge_w:.6f}
+    # zhd: {zhd:.6f}
+    # zwd: {zwd:.6f}
+    # trop_corr: {trop_corr:.6f}
+    # """
+    # )
 
     # trop_corr_mod = tropospheric_correction_vmf3(
     #     mfh=mfh,
