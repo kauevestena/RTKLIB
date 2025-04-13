@@ -58,6 +58,8 @@ def main():
     os.environ["PROC_SCENARIO"] = proc_scenario
     send_environ("PROC_SCENARIO")
 
+    print(f"proc_scenario: {proc_scenario}")
+
     for stationname in tqdm(stationwise_calls):
         os.environ["CURRENT_STATION"] = stationname
 
