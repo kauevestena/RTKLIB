@@ -5241,6 +5241,8 @@ def novo_modelo_troposferico_brasil(
     ch,
     bw,
     cw,
+    mfh,
+    mfw
 ):
     """
     Modelo adaptado para o Brasil usando parâmetros do VMF3 com melhorias regionais
@@ -5252,8 +5254,8 @@ def novo_modelo_troposferico_brasil(
     aw_ajust, bw_ajust, cw_ajust = ajustar_coeficientes_vmf3(aw, bw, cw, lat)
 
     # 2. Calcular mapeamentos com coeficientes ajustados
-    mfh = 1.0 / (sin(el) + ah_ajust / (sin(el) + bh_ajust / (sin(el) + ch_ajust)))
-    mfw = 1.0 / (sin(el) + aw_ajust / (sin(el) + bw_ajust / (sin(el) + cw_ajust)))
+    # mfh = 1.0 / (sin(el) + ah_ajust / (sin(el) + bh_ajust / (sin(el) + ch_ajust)))
+    # mfw = 1.0 / (sin(el) + aw_ajust / (sin(el) + bw_ajust / (sin(el) + cw_ajust)))
 
     # 3. Calcular derivadas para termos de segunda ordem
     dmfh_de, d2mfh_de2 = calcular_derivadas_mapeamento(ah_ajust, bh_ajust, ch_ajust, el)
@@ -5276,6 +5278,10 @@ def novo_modelo_troposferico_brasil(
         gn_w_ajust * cos_az + ge_w_ajust * sin_az
     ) * mw_grad
 
+    # 9. Gradientes modificados
+    grad_n_mod = dmfh_de * gn_h_ajust + dmfw_de * gn_w_ajust
+    grad_e_mod = dmfh_de * ge_h_ajust + dmfw_de * ge_w_ajust
+
     # 6. Termos de segunda ordem
     termo_seg_ordem_h = 0.5 * d2mfh_de2 * (gn_h_ajust**2 + ge_h_ajust**2) * zhd
     termo_seg_ordem_w = 0.5 * d2mfw_de2 * (gn_w_ajust**2 + ge_w_ajust**2) * zwd
@@ -5288,14 +5294,11 @@ def novo_modelo_troposferico_brasil(
         mfh * zhd
         + mfw * zwd
         + termo_gradiente
-        + termo_seg_ordem_h
-        + termo_seg_ordem_w
-        + termo_umidade
+        # + termo_seg_ordem_h
+        # + termo_seg_ordem_w
+        # + termo_umidade
     )
 
-    # 9. Gradientes modificados
-    grad_n_mod = dmfh_de * gn_h_ajust + dmfw_de * gn_w_ajust
-    grad_e_mod = dmfh_de * ge_h_ajust + dmfw_de * ge_w_ajust
 
     return (
         atraso_total,
@@ -5389,6 +5392,8 @@ def process(data_as_str, station, delaypath):
         ch=ch,
         bw=bw,
         cw=cw,
+        mfh=mfh,
+        mfw=mfw,
     )
 
     # logging.info(f"trop_corr: {trop_corr}, {trop_corr_only_grad}")
