@@ -16,7 +16,7 @@ from time import sleep
 from datetime import datetime, timezone, date
 
 # TO MODIFY:
-proc_scenario = "vmf3_grads_lat_14_04"
+proc_scenario = "vmf3_grads_lat_coeffs"
 
 # other constants:
 
@@ -43,9 +43,8 @@ proc_sc_root = {
     "vmf3_grads_test": os.path.join(outputs_path, "vmf3_grads_test"),
     "vmf3_nograd_test": os.path.join(outputs_path, "vmf3_nograd_test"),
     "vmf3_grads_deriv_lat": os.path.join(outputs_path, "vmf3_grads_deriv_lat"),
-    "vmf3_grads_lat_14_04": os.path.join(
-        outputs_path, "vmf3_grads_lat_14_04"
-    ),
+    "vmf3_grads_lat_14_04": os.path.join(outputs_path, "vmf3_grads_lat_14_04"),
+    "vmf3_grads_lat_coeffs": os.path.join(outputs_path, "vmf3_grads_lat_coeffs"),
     # "mod_vmf3_ztd_orig": os.path.join(outputs_path, "mod_vmf3_ztd_orig"),
 }
 
@@ -64,6 +63,7 @@ proc_sc_execs = {
     "vmf3_nograd_test": exec_paths["mod"],
     "vmf3_grads_deriv_lat": exec_paths["mod"],
     "vmf3_grads_lat_14_04": exec_paths["mod"],
+    "vmf3_grads_lat_coeffs": exec_paths["mod"],
     # "mod_vmf3_ztd_orig": exec_paths["mod"],
 }
 

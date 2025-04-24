@@ -5098,6 +5098,11 @@ def vmf3_ht(mjd=None, lat=None, lon=None, h_ell=None, zd=None, ah=None, aw=None)
         + cw_A2 * np.cos(doy / 365.25 * 4 * np.pi)
         + cw_B2 * np.sin(doy / 365.25 * 4 * np.pi)
     )
+
+    # adjusting the coefficients:
+    ah, bh, ch = ajustar_coeficientes_vmf3(ah, bh, ch, lat)
+    aw, bw, cw = ajustar_coeficientes_vmf3(aw, bw, cw, lat)
+
     # calculating the hydrostatic and wet mapping factors
     mfh = (1 + (ah / (1 + bh / (1 + ch)))) / (
         np.sin(el) + (ah / (np.sin(el) + bh / (np.sin(el) + ch)))
@@ -5164,19 +5169,55 @@ def calcular_derivadas_mapeamento(a, b, c, el):
     return primeira_derivada, segunda_derivada
 
 
-def ajustar_coeficientes_vmf3(a, b, c, lat):
+def ajustar_coeficientes_vmf3(a, b, c, lat_rad, metodo="tropical"):
     """
-    Ajusta os coeficientes do VMF3 para latitudes brasileiras
-    """
-    # Fator de correção latitudinal (empírico para o Brasil)
-    lat_factor = 1.0 + 0.05 * np.sin(2 * lat)
+    Ajusta os coeficientes do modelo VMF3 para aplicação em latitudes brasileiras.
 
-    # Ajuste dos coeficientes
-    a_ajust = a * (
-        1.0 + 0.01 * (np.abs(lat) - 15) / 30
-    )  # + efeito para latitudes tropicais
-    b_ajust = b * lat_factor
-    c_ajust = c * (1.0 - 0.005 * (np.abs(lat) - 15))  # - efeito para latitudes médias
+    Parâmetros:
+    -----------
+    a, b, c : float
+        Coeficientes originais do VMF3
+    lat_rad : float
+        Latitude em radianos (entre -π/2 e π/2)
+    metodo : str, opcional
+        Método de ajuste ('tropical' ou 'generalizado', padrão='tropical')
+
+    Retorna:
+    --------
+    tuple (a_ajust, b_ajust, c_ajust)
+        Coeficientes ajustados para a latitude especificada
+
+    Observações:
+    ------------
+    - O método 'tropical' é otimizado para latitudes entre 5°N e 34°S (Brasil)
+    - O método 'generalizado' usa uma abordagem mais suave para outras regiões
+    - Baseado em estudos empíricos de correlação atmosférica para a região
+    """
+
+    # Validação da entrada
+    # if not (-np.pi/2 <= lat_rad <= np.pi/2):
+    #     raise ValueError("Latitude deve estar em radianos (-π/2 a π/2)")
+
+    lat_deg = np.abs(np.degrees(lat_rad))
+
+    if metodo == "tropical":
+        # Fator de correção específico para o Brasil (baseado em dados empíricos)
+        tropical_factor = 1.02 + 0.03 * np.cos(2 * lat_rad)
+
+        # Ajustes otimizados para a faixa tropical/subtropical
+        a_ajust = a * (1.0 + 0.008 * (lat_deg - 15) / 30)
+        b_ajust = b * tropical_factor
+        c_ajust = c * (0.995 + 0.002 * np.sin(lat_rad))
+
+    elif metodo == "generalizado":
+        # Abordagem mais genérica baseada em gradiente latitudinal
+        lat_normalized = lat_deg / 90
+        a_ajust = a * (1.0 + 0.01 * lat_normalized)
+        b_ajust = b * (1.0 + 0.015 * np.sin(2 * lat_rad))
+        c_ajust = c * (0.992 + 0.005 * np.cos(lat_rad))
+
+    else:
+        raise ValueError("Método inválido. Use 'tropical' ou 'generalizado'")
 
     return a_ajust, b_ajust, c_ajust
 
@@ -5242,7 +5283,7 @@ def novo_modelo_troposferico_brasil(
     bw,
     cw,
     mfh,
-    mfw
+    mfw,
 ):
     """
     Modelo adaptado para o Brasil usando parâmetros do VMF3 com melhorias regionais
@@ -5250,16 +5291,16 @@ def novo_modelo_troposferico_brasil(
     el = pi / 2 - zd
 
     # 1. Ajustar coeficientes do VMF3 para latitudes brasileiras
-    ah_ajust, bh_ajust, ch_ajust = ajustar_coeficientes_vmf3(ah, bh, ch, lat)
-    aw_ajust, bw_ajust, cw_ajust = ajustar_coeficientes_vmf3(aw, bw, cw, lat)
+    # ah_ajust, bh_ajust, ch_ajust = ajustar_coeficientes_vmf3(ah, bh, ch, lat)
+    # aw_ajust, bw_ajust, cw_ajust = ajustar_coeficientes_vmf3(aw, bw, cw, lat)
 
     # 2. Calcular mapeamentos com coeficientes ajustados
     # mfh = 1.0 / (sin(el) + ah_ajust / (sin(el) + bh_ajust / (sin(el) + ch_ajust)))
     # mfw = 1.0 / (sin(el) + aw_ajust / (sin(el) + bw_ajust / (sin(el) + cw_ajust)))
 
     # 3. Calcular derivadas para termos de segunda ordem
-    dmfh_de, d2mfh_de2 = calcular_derivadas_mapeamento(ah_ajust, bh_ajust, ch_ajust, el)
-    dmfw_de, d2mfw_de2 = calcular_derivadas_mapeamento(aw_ajust, bw_ajust, cw_ajust, el)
+    # dmfh_de, d2mfh_de2 = calcular_derivadas_mapeamento(ah_ajust, bh_ajust, ch_ajust, el)
+    # dmfw_de, d2mfw_de2 = calcular_derivadas_mapeamento(aw_ajust, bw_ajust, cw_ajust, el)
 
     # 4. Ajustar gradientes para condições brasileiras
     gn_h_ajust, ge_h_ajust, gn_w_ajust, ge_w_ajust = gradientes_brasil(
@@ -5279,12 +5320,12 @@ def novo_modelo_troposferico_brasil(
     ) * mw_grad
 
     # 9. Gradientes modificados
-    grad_n_mod = dmfh_de * gn_h_ajust + dmfw_de * gn_w_ajust
-    grad_e_mod = dmfh_de * ge_h_ajust + dmfw_de * ge_w_ajust
+    # grad_n_mod = dmfh_de * gn_h_ajust + dmfw_de * gn_w_ajust
+    # grad_e_mod = dmfh_de * ge_h_ajust + dmfw_de * ge_w_ajust
 
     # 6. Termos de segunda ordem
-    termo_seg_ordem_h = 0.5 * d2mfh_de2 * (gn_h_ajust**2 + ge_h_ajust**2) * zhd
-    termo_seg_ordem_w = 0.5 * d2mfw_de2 * (gn_w_ajust**2 + ge_w_ajust**2) * zwd
+    # termo_seg_ordem_h = 0.5 * d2mfh_de2 * (gn_h_ajust**2 + ge_h_ajust**2) * zhd
+    # termo_seg_ordem_w = 0.5 * d2mfw_de2 * (gn_w_ajust**2 + ge_w_ajust**2) * zwd
 
     # 7. Adicionar termo de umidade tropical
     termo_umidade = termo_umidade_tropical(zwd, el, lat)
@@ -5299,6 +5340,8 @@ def novo_modelo_troposferico_brasil(
         # + termo_umidade
     )
 
+    grad_n_mod = 0
+    grad_e_mod = 0
 
     return (
         atraso_total,
