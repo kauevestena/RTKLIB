@@ -80,7 +80,7 @@ def create_conf_file(eop_filepath, outpath, ztd_default_mode=True):
 
 pos1-posmode       =ppp-kine   # (0:single,1:dgps,2:kinematic,3:static,4:movingbase,5:fixed,6:ppp-kine,7:ppp-static)
 pos1-frequency     =l1+l2      # (1:l1,2:l1+l2,3:l1+l2+l5,4:l1+l2+l5+l6,5:l1+l2+l5+l6+l7)
-pos1-soltype       =combined   # (0:forward,1:backward,2:combined)
+pos1-soltype       =forward   # (0:forward,1:backward,2:combined)
 pos1-elmask        =7          # (deg)
 pos1-snrmask_r     =off        # (0:off,1:on)
 pos1-snrmask_b     =off        # (0:off,1:on)

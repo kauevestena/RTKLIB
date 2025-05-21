@@ -16,7 +16,7 @@ from time import sleep
 from datetime import datetime, timezone, date
 
 # TO MODIFY:
-proc_scenario = "actual_vmf3_grads"
+proc_scenario = "vmf3_grads_forward"
 
 # other constants:
 
@@ -43,6 +43,7 @@ proc_sc_root = {
     "vmf3_grads_test": os.path.join(outputs_path, "vmf3_grads_test"),
     "vmf3_nograd_test": os.path.join(outputs_path, "vmf3_nograd_test"),
     "actual_vmf3_grads": os.path.join(outputs_path, "actual_vmf3_grads"),
+    "vmf3_grads_forward": os.path.join(outputs_path, "vmf3_grads_forward"),
     # "mod_vmf3_ztd_orig": os.path.join(outputs_path, "mod_vmf3_ztd_orig"),
 }
 
@@ -60,6 +61,7 @@ proc_sc_execs = {
     "vmf3_grads_test": exec_paths["mod"],
     "vmf3_nograd_test": exec_paths["mod"],
     "actual_vmf3_grads": exec_paths["mod"],
+    "vmf3_grads_forward": exec_paths["mod"],
     # "mod_vmf3_ztd_orig": exec_paths["mod"],
 }
 
