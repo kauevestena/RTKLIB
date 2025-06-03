@@ -15,6 +15,13 @@ basepath = rootpath_data
 
 epochs = ["VERAO", "INVERNO"]
 
+YEAR = 2020
+
+epoch_months = {
+    "VERAO": 1,
+    "INVERNO": 7,
+}
+
 stations = list(estacoes.keys())
 
 custom_op_modes = {
@@ -69,7 +76,7 @@ def compose_path_selecting_bykey(basepath, inputlist, inputkey):
     return os.path.join(basepath, filename)
 
 
-def create_conf_file(eop_filepath, outpath, ztd_default_mode=True):
+def create_conf_file(eop_filepath, outpath, outpath_trace):
 
     # ztd_mode = "est-ztd"
 
@@ -80,14 +87,14 @@ def create_conf_file(eop_filepath, outpath, ztd_default_mode=True):
 
 pos1-posmode       =ppp-kine   # (0:single,1:dgps,2:kinematic,3:static,4:movingbase,5:fixed,6:ppp-kine,7:ppp-static)
 pos1-frequency     =l1+l2      # (1:l1,2:l1+l2,3:l1+l2+l5,4:l1+l2+l5+l6,5:l1+l2+l5+l6+l7)
-pos1-soltype       =combined   # (0:forward,1:backward,2:combined)
+pos1-soltype       =forward   # (0:forward,1:backward,2:combined)
 pos1-elmask        =7          # (deg)
 pos1-snrmask_r     =off        # (0:off,1:on)
 pos1-snrmask_b     =off        # (0:off,1:on)
 pos1-dynamics      =off        # (0:off,1:on)
 pos1-tidecorr      =on          # (0:off,1:on)
 pos1-ionoopt       =dual-freq  # (0:off,1:brdc,2:sbas,3:dual-freq,4:est-stec,5:ionex-tec,6:qzs-brdc,7:qzs-lex,8:vtec_sf,9:vtec_ef,10:gtec)
-pos1-tropopt       =est-ztd # (0:off,1:saas,2:sbas,3:est-ztd,4:est-ztdgrad)
+pos1-tropopt       =est-ztdgrad # (0:off,1:saas,2:sbas,3:est-ztd,4:est-ztdgrad)
 pos1-sateph        =precise    # (0:brdc,1:precise,2:brdc+sbas,3:brdc+ssrapc,4:brdc+ssrcom)
 pos1-posopt1       =on         # (0:off,1:on)
 pos1-posopt2       =on         # (0:off,1:on)
@@ -142,12 +149,18 @@ ant1-postype       =rinexhead        # (0:llh,1:xyz,2:single,3:posfile,4:rinexhe
 ant1-anttype       =*
 misc-timeinterp    =off        # (0:off,1:on)
 misc-sbasatsel     =0          # (0:all)
-file-eopfile       ={eop_filepath}  """
+file-eopfile       ={eop_filepath}  
+misc-tracelevel    =3
+file-tracefile     ={outpath_trace}   """
+
+    # misc-starttime     ={input_date.year}/{input_date.month:02}/{input_date.day:02} {start_hour}:00:00
+    # misc-endtime       ={input_date.year}/{input_date.month:02}/{input_date.day:02} {end_hour}:00:00
 
     # file-outztdfile    ={delays_outpath}
 
     with open(outpath, "w+") as outfile:
         outfile.write(file_as_string)
+
 
 stationwise_calls = {}
 
@@ -277,16 +290,24 @@ with open(calls_path, "w+", encoding="utf-8") as calls_file:
 
                         create_dir_ifnotexists(outfolderpath_delays)
 
+                        outfolderpath_trace = os.path.join(
+                            proc_sc_root[proc_scenario],
+                            epoch,
+                            station,
+                            "trace",
+                        )
+
+                        create_dir_ifnotexists(outfolderpath_trace)
+
+                        outpath_trace = os.path.join(
+                            outfolderpath_trace,
+                            rinex_basename + ".trace",
+                        )
+
                         outpath_delays = os.path.join(
                             # specific_outdirpaths[option],
                             outfolderpath_delays,
                             rinex_basename + "_delays.txt",
-                        )
-
-                        create_conf_file(
-                            eop_filepath,
-                            configuration_path,
-                            custom_op_modes[option],
                         )
 
                         rinex_n_path = os.path.join(
@@ -295,6 +316,10 @@ with open(calls_path, "w+", encoding="utf-8") as calls_file:
 
                         rinex_g_path = os.path.join(
                             rinex_folderpath, rinex_uni_base + "g"
+                        )
+
+                        rinex_asterisk_path = os.path.join(
+                            rinex_folderpath, rinex_uni_base + "*"
                         )
 
                         outfolderpath = os.path.join(
@@ -318,6 +343,13 @@ with open(calls_path, "w+", encoding="utf-8") as calls_file:
                             clock_path, clock_filelist, rinex_composed_gpsday
                         )
 
+                        doy = date_to_doy(rinex_date)
+
+                        sp3_mgex_filename = (
+                            f"COD0MGXFIN_{YEAR}{doy:03}0000_01D_05M_ORB.SP3"
+                        )
+                        sp3_mgex_path = os.path.join(ephem_path, sp3_mgex_filename)
+
                         by_rinex_folderpaths_to_check = [
                             rinex_n_path,
                             rinex_g_path,
@@ -327,10 +359,22 @@ with open(calls_path, "w+", encoding="utf-8") as calls_file:
                             rinex_file_path,
                             clk_path,
                             configuration_path,
+                            sp3_mgex_path,
                         ]
                         check_listofpaths(by_rinex_folderpaths_to_check)
 
-                        app_call = f'"{rnx2rtkp_path}" -k "{configuration_path}" -o "{outpath}" "{rinex_file_path}" "{rinex_n_path}" "{rinex_g_path}" "{sp3_igs_path}" "{sp3_igl_path}" "{clk_path}" "{blq_filepath}" "{sat_ant_path}" "{rcv_ant_path}" "{dcb_file_path}"'
+                        create_conf_file(
+                            eop_filepath=eop_filepath,
+                            outpath=configuration_path,
+                            outpath_trace=outpath_trace,
+                        )
+
+                        app_call = f'"{rnx2rtkp_path}" -k "{configuration_path}" -ts {rinex_date.year}/{rinex_date.month:02}/{rinex_date.day:02} 10:00:00 -te {rinex_date.year}/{rinex_date.month:02}/{rinex_date.day:02} 12:00:00  -o "{outpath}" "{rinex_file_path}" "{rinex_n_path}" "{rinex_g_path}" "{sp3_igs_path}" "{sp3_mgex_path}" "{clk_path}" "{blq_filepath}" "{sat_ant_path}" "{rcv_ant_path}" "{dcb_file_path}"'
+
+                        # sample filename for doy=1 year=2020:
+                        # COD0MGXFIN_20200010000_01D_05M_ORB.SP3
+
+                        # app_call = f'"{rnx2rtkp_path}" -k "{configuration_path}" -ts {rinex_date.year}/{rinex_date.month:02}/{rinex_date.day:02} 10:00:00 -te {rinex_date.year}/{rinex_date.month:02}/{rinex_date.day:02} 12:00:00  -o "{outpath}" "{rinex_file_path}" "{rinex_n_path}" "{rinex_g_path}" "{sp3_mgex_path}" "{clk_path}" "{blq_filepath}" "{sat_ant_path}" "{rcv_ant_path}" "{dcb_file_path}"'
 
                         # calls_file.write(app_call+'\n')
                         calls_file.write(f"{outpath_delays},{app_call}\n")

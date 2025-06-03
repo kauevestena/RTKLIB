@@ -21,8 +21,8 @@ curr_delay_path_store = "curr_delaypath.txt"
 curr_station_path_store = "curr_station_name.txt"
 
 
-if proc_scenario not in ("orig", "orig_nograd"):
-    launch_proc_server()
+# if proc_scenario not in ("orig", "orig_nograd"):
+#     launch_proc_server()
 
 # resuming capabilities:
 processed_dict = read_json_file("processed_list.json")
@@ -48,16 +48,16 @@ with open(calls_path) as calls_file:
         os.environ["CURRENT_DELAYPATH"] = curr_delay_filepath
 
         # sending them, if needed:
-        if proc_scenario not in ("orig", "orig_nograd"):
-            send_environ("CURRENT_STATION")
-            send_environ("CURRENT_DELAYPATH")
+        # if proc_scenario not in ("orig", "orig_nograd"):
+        #     send_environ("CURRENT_STATION")
+        #     send_environ("CURRENT_DELAYPATH")
 
         # if the file already exists...
-        if proc_scenario not in ("orig", "orig_nograd"):
-            with open(curr_delay_filepath, "w+") as f:
-                f.write(delays_header + "\n")
-        else:
-            remove_file_if_exists(curr_delay_filepath)
+        # if proc_scenario not in ("orig", "orig_nograd"):
+        #     with open(curr_delay_filepath, "w+") as f:
+        #         f.write(delays_header + "\n")
+        # else:
+        #     remove_file_if_exists(curr_delay_filepath)
 
         with open(curr_delay_path_store, "w+") as curr_path_storage:
             curr_path_storage.write(curr_delay_filepath)

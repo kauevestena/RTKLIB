@@ -13,10 +13,10 @@ from astropy.time import Time
 import logging
 from time import sleep
 
-from datetime import datetime, timezone, date
+from datetime import datetime, timezone, date, timedelta
 
 # TO MODIFY:
-proc_scenario = "vmf3_taylor"
+proc_scenario = "demo5_2h_orig"
 
 # other constants:
 
@@ -45,12 +45,14 @@ proc_sc_root = {
     "vmf3_grads_deriv_lat": os.path.join(outputs_path, "vmf3_grads_deriv_lat"),
     "vmf3_grads_lat_14_04": os.path.join(outputs_path, "vmf3_grads_lat_14_04"),
     "vmf3_taylor": os.path.join(outputs_path, "vmf3_taylor"),
+    "demo5_2h_orig": os.path.join(outputs_path, "demo5_2h_orig"),
     # "mod_vmf3_ztd_orig": os.path.join(outputs_path, "mod_vmf3_ztd_orig"),
 }
 
 exec_paths = {
     "mod": "/home/RTKLIB/app/rnx2rtkp/gcc/rnx2rtkp",
     "orig": "/home/RTKLIB/rtklib_orig/RTKLIB/app/rnx2rtkp/gcc/rnx2rtkp",
+    "demo5": "/home/RTKLIB/demo5/RTKLIB/app/consapp/rnx2rtkp/gcc/rnx2rtkp",
 }
 
 proc_sc_execs = {
@@ -64,6 +66,7 @@ proc_sc_execs = {
     "vmf3_grads_deriv_lat": exec_paths["mod"],
     "vmf3_grads_lat_14_04": exec_paths["mod"],
     "vmf3_taylor": exec_paths["mod"],
+    "demo5_2h_orig": exec_paths["demo5"],
     # "mod_vmf3_ztd_orig": exec_paths["mod"],
 }
 
@@ -686,3 +689,48 @@ def clean_unfinished_outputs(calls_list):
             logging.info(f"skipping already done call: {call}")
 
     return outlist
+
+
+def doy_to_date(year: int, doy: int) -> date:
+    """
+    Convert a year and day-of-year (doy) into a calendar date.
+
+    Parameters:
+        year (int): The year (e.g., 2025).
+        doy (int):  Day of the year, 1-based (1 through 365 or 366).
+
+    Returns:
+        datetime.date: The corresponding date.
+
+    Raises:
+        ValueError: If doy is not in the valid range for that year.
+    """
+    # Jan 1 of the given year
+    first = date(year, 1, 1)
+    # Subtract 1 because Jan 1 is doy=1
+    try:
+        result = first + timedelta(days=doy - 1)
+    except OverflowError:
+        raise ValueError(
+            f"doy must be between 1 and {366 if is_leap_year(year) else 365}"
+        )
+    # Sanity check
+    if result.year != year:
+        raise ValueError(
+            f"doy must be between 1 and {366 if is_leap_year(year) else 365}"
+        )
+    return result
+
+
+def is_leap_year(year: int) -> bool:
+    """
+    Return True if the given year is a leap year in the Gregorian calendar.
+    """
+    return year % 4 == 0 and (year % 100 != 0 or year % 400 == 0)
+
+
+def date_to_doy(d: date) -> int:
+    """
+    Given a datetime.date, return the day of year (1-based).
+    """
+    return d.timetuple().tm_yday
