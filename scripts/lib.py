@@ -16,7 +16,7 @@ from time import sleep
 from datetime import datetime, timezone, date, timedelta
 
 # TO MODIFY:
-proc_scenario = "demo5_2h_orig"
+proc_scenario = "demo5_2h_orig_gpsonly"
 
 # other constants:
 
@@ -46,6 +46,7 @@ proc_sc_root = {
     "vmf3_grads_lat_14_04": os.path.join(outputs_path, "vmf3_grads_lat_14_04"),
     "vmf3_taylor": os.path.join(outputs_path, "vmf3_taylor"),
     "demo5_2h_orig": os.path.join(outputs_path, "demo5_2h_orig"),
+    "demo5_2h_orig_gpsonly": os.path.join(outputs_path, "demo5_2h_orig_gpsonly"),
     # "mod_vmf3_ztd_orig": os.path.join(outputs_path, "mod_vmf3_ztd_orig"),
 }
 
@@ -67,6 +68,7 @@ proc_sc_execs = {
     "vmf3_grads_lat_14_04": exec_paths["mod"],
     "vmf3_taylor": exec_paths["mod"],
     "demo5_2h_orig": exec_paths["demo5"],
+    "demo5_2h_orig_gpsonly": exec_paths["demo5"],
     # "mod_vmf3_ztd_orig": exec_paths["mod"],
 }
 

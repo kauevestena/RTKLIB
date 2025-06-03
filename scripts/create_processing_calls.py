@@ -37,7 +37,7 @@ satant_filename = "igs14.atx"
 
 def checkpath(input_path):
     if not os.path.exists(input_path):
-        raise Exception(f"Arquivo\n {input_path} \nInexistente!!")
+        raise FileNotFoundError(f"File not found: {input_path}")
 
 
 def check_listofpaths(inputlist):
@@ -102,7 +102,7 @@ pos1-posopt3       =on         # (0:off,1:on)
 pos1-posopt4       =on         # (0:off,1:on)
 pos1-posopt5       =on         # (0:off,1:on)
 pos1-exclsats      =           # (prn ...)
-pos1-navsys        =5          # (1:gps+2:sbas+4:glo+8:gal+16:qzs+32:comp)
+pos1-navsys        =1          # (1:gps+2:sbas+4:glo+8:gal+16:qzs+32:comp)
 pos2-armode        =off        # (0:off,1:continuous,2:instantaneous,3:fix-and-hold)
 pos2-gloarmode     =off         # (0:off,1:on,2:autocal)
 pos2-arthres       =3
@@ -359,7 +359,7 @@ with open(calls_path, "w+", encoding="utf-8") as calls_file:
                             rinex_file_path,
                             clk_path,
                             configuration_path,
-                            sp3_mgex_path,
+                            # sp3_mgex_path,
                         ]
                         check_listofpaths(by_rinex_folderpaths_to_check)
 
@@ -369,7 +369,9 @@ with open(calls_path, "w+", encoding="utf-8") as calls_file:
                             outpath_trace=outpath_trace,
                         )
 
-                        app_call = f'"{rnx2rtkp_path}" -k "{configuration_path}" -ts {rinex_date.year}/{rinex_date.month:02}/{rinex_date.day:02} 10:00:00 -te {rinex_date.year}/{rinex_date.month:02}/{rinex_date.day:02} 12:00:00  -o "{outpath}" "{rinex_file_path}" "{rinex_n_path}" "{rinex_g_path}" "{sp3_igs_path}" "{sp3_mgex_path}" "{clk_path}" "{blq_filepath}" "{sat_ant_path}" "{rcv_ant_path}" "{dcb_file_path}"'
+                        # app_call = f'"{rnx2rtkp_path}" -k "{configuration_path}" -ts {rinex_date.year}/{rinex_date.month:02}/{rinex_date.day:02} 10:00:00 -te {rinex_date.year}/{rinex_date.month:02}/{rinex_date.day:02} 12:00:00  -o "{outpath}" "{rinex_file_path}" "{rinex_n_path}" "{rinex_g_path}" "{sp3_igs_path}" "{sp3_mgex_path}" "{clk_path}" "{blq_filepath}" "{sat_ant_path}" "{rcv_ant_path}" "{dcb_file_path}"'
+
+                        app_call = f'"{rnx2rtkp_path}" -k "{configuration_path}" -ts {rinex_date.year}/{rinex_date.month:02}/{rinex_date.day:02} 10:00:00 -te {rinex_date.year}/{rinex_date.month:02}/{rinex_date.day:02} 12:00:00  -o "{outpath}" "{rinex_file_path}" "{rinex_n_path}" "{rinex_g_path}" "{sp3_igs_path}" "{clk_path}" "{blq_filepath}" "{sat_ant_path}" "{rcv_ant_path}" "{dcb_file_path}"'
 
                         # sample filename for doy=1 year=2020:
                         # COD0MGXFIN_20200010000_01D_05M_ORB.SP3
