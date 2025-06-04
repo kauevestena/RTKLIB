@@ -16,7 +16,7 @@ from time import sleep
 from datetime import datetime, timezone, date, timedelta
 
 # TO MODIFY:
-proc_scenario = "demo5_2h_orig_gpsonly"
+proc_scenario = "demo5_vmf3_proto"
 
 # other constants:
 
@@ -24,8 +24,8 @@ calls_path = "app_calls.txt"
 
 stationwise_calls_path = "scripts/stationwise_calls.json"
 
-already_done_stations_path = "scripts/already_done_stations.txt"
-already_done_calls_path = "scripts/already_done_calls.txt"
+already_done_stations_path = f"scripts/already_done_stations_{proc_scenario}.txt"
+already_done_calls_path = f"scripts/already_done_calls_{proc_scenario}.txt"
 
 # don't forget to create the symlink to the VMF3 data!
 rootpath_data = "/home/gnss_data"
@@ -47,6 +47,7 @@ proc_sc_root = {
     "vmf3_taylor": os.path.join(outputs_path, "vmf3_taylor"),
     "demo5_2h_orig": os.path.join(outputs_path, "demo5_2h_orig"),
     "demo5_2h_orig_gpsonly": os.path.join(outputs_path, "demo5_2h_orig_gpsonly"),
+    "demo5_vmf3_proto": os.path.join(outputs_path, "demo5_vmf3_proto"),
     # "mod_vmf3_ztd_orig": os.path.join(outputs_path, "mod_vmf3_ztd_orig"),
 }
 
@@ -69,6 +70,7 @@ proc_sc_execs = {
     "vmf3_taylor": exec_paths["mod"],
     "demo5_2h_orig": exec_paths["demo5"],
     "demo5_2h_orig_gpsonly": exec_paths["demo5"],
+    "demo5_vmf3_proto": exec_paths["demo5"],
     # "mod_vmf3_ztd_orig": exec_paths["mod"],
 }
 
@@ -235,48 +237,117 @@ def obter_pontos_proximos(df, lat_alvo, lon_alvo):
 
     return pontos_retangulo
 
+def ordenar_quatro_cantos(pontos: pd.DataFrame) -> pd.DataFrame:
+    """
+    Recebe um DataFrame `pontos` com exatamente quatro linhas e colunas ['lat','lon','valor'].
+    Retorna um novo DataFrame em que as linhas estão ordenadas na sequência:
+       0 -> NW (lat=max, lon=min)
+       1 -> NE (lat=max, lon=max)
+       2 -> SE (lat=min, lon=max)
+       3 -> SW (lat=min, lon=min)
 
-# Função para interpolação bilinear
-def bilinear_interpolation(latd, lond, pontos):
+    Lança ValueError se:
+      - não houver exatamente 4 linhas
+      - não for possível encontrar um ponto para cada canto (i.e. retângulo inválido)
+    """
+    if len(pontos) != 4:
+        raise ValueError("São necessários exatamente 4 pontos para ordenar em cantos.")
+    
+    # extrair min/max de lat e lon
+    y_max = pontos['lat'].max()   # latitude norte
+    y_min = pontos['lat'].min()   # latitude sul
+    x_min = pontos['lon'].min()   # longitude oeste
+    x_max = pontos['lon'].max()   # longitude leste
+
+    # selecionar cada canto
+    nw = pontos[(pontos['lat'] == y_max) & (pontos['lon'] == x_min)]
+    ne = pontos[(pontos['lat'] == y_max) & (pontos['lon'] == x_max)]
+    se = pontos[(pontos['lat'] == y_min) & (pontos['lon'] == x_max)]
+    sw = pontos[(pontos['lat'] == y_min) & (pontos['lon'] == x_min)]
+
+    # conferir se encontramos exatamente 1 linha para cada canto
+    for nome, df_canto in zip(['NW','NE','SE','SW'], [nw, ne, se, sw]):
+        if df_canto.shape[0] != 1:
+            raise ValueError(
+                f"Canto {nome} não encontrado corretamente: "
+                f"esperava 1 ponto para ({'lat='+str(y_max) if nome[0]=='N' else 'lat='+str(y_min)}, "
+                f"{'lon='+str(x_min) if nome[-1]=='W' else 'lon='+str(x_max)}), "
+                f"mas encontrei {df_canto.shape[0]}."
+            )
+
+    # concatenar na ordem [NW, NE, SE, SW]
+    ordem = pd.concat([nw, ne, se, sw], ignore_index=True)
+    return ordem
+
+
+def bilinear_interpolation(lat_alvo, lon_alvo, pontos):
     try:
-        x1, y1, v1 = (
-            pontos.iloc[0]["lon"],
-            pontos.iloc[0]["lat"],
-            pontos.iloc[0]["valor"],
-        )
-        x2, y2, v2 = (
-            pontos.iloc[1]["lon"],
-            pontos.iloc[1]["lat"],
-            pontos.iloc[1]["valor"],
-        )
-        x3, y3, v3 = (
-            pontos.iloc[2]["lon"],
-            pontos.iloc[2]["lat"],
-            pontos.iloc[2]["valor"],
-        )
-        x4, y4, v4 = (
-            pontos.iloc[3]["lon"],
-            pontos.iloc[3]["lat"],
-            pontos.iloc[3]["valor"],
-        )
+        # Verificar se temos exatamente 4 pontos
+        if len(pontos) != 4:
+            raise ValueError("São necessários exatamente 4 pontos para a interpolação bilinear")
 
-        print(f"Pontos para interpolação:")
-        print(f"Ponto 1: x1={x1}, y1={y1}, v1={v1}")
-        print(f"Ponto 2: x2={x2}, y2={y2}, v2={v2}")
-        print(f"Ponto 3: x3={x3}, y3={y3}, v3={v3}")
-        print(f"Ponto 4: x4={x4}, y4={y4}, v4={v4}")
+        # Ordenar os pontos nos cantos corretos (NW, NE, SE, SW)
+        try:
+            pontos_ordenados = ordenar_quatro_cantos(pontos)
+        except ValueError as e:
+            raise ValueError(f"Falha ao ordenar cantos: {e}")
 
-        # Calcular ga e gb
-        ga = ((lond - x1) * (v2 - v1) / (x4 - x3)) + v1
-        gb = ((lond - x1) * (v4 - v3) / (x4 - x3)) + v3
+        # Extrair coordenadas e valores dos pontos ordenados
+        x = pontos_ordenados['lon'].values   # [x1, x2, x2, x1]
+        y = pontos_ordenados['lat'].values   # [y1, y1, y2, y2]
+        v = pontos_ordenados['valor'].values # [Q11, Q12, Q22, Q21]
 
-        # Calcular gi
-        gi = (((y3 - y1) - (latd - y1)) * (ga - gb) / (y3 - y1)) + gb
+        # Verificar se os pontos formam um retângulo válido
+        if not (x[0] == x[3] and x[1] == x[2] and y[0] == y[1] and y[2] == y[3]):
+            raise ValueError("Os pontos não formam um retângulo válido para interpolação")
 
-        print(f"Resultado da interpolação: {gi}")
-        return gi
-    except IndexError:
-        raise ValueError("Erro na seleção dos pontos para interpolação.")
+        # Extrair os cantos do retângulo
+        x1, x2 = x[0], x[1]  # x1 (oeste), x2 (leste)
+        y1, y2 = y[0], y[2]  # y1 (norte), y2 (sul)
+        
+        # Valores nos vértices (Q11:NW, Q12:NE, Q22:SE, Q21:SW)
+        Q11, Q12, Q22, Q21 = v[0], v[1], v[2], v[3]
+
+        print("\nPontos ordenados para interpolação:")
+        print(f"NW ({y1}, {x1}): {Q11}")
+        print(f"NE ({y1}, {x2}): {Q12}")
+        print(f"SE ({y2}, {x2}): {Q22}")
+        print(f"SW ({y2}, {x1}): {Q21}")
+
+        # Verificar se o ponto alvo está dentro do retângulo
+        if not (x1 <= lon_alvo <= x2 and y2 <= lat_alvo <= y1):
+            raise ValueError("O ponto alvo está fora do retângulo formado pelos pontos")
+
+        # Calcular os pesos para interpolação
+        dx = x2 - x1
+        dy = y1 - y2
+        
+        if dx == 0 or dy == 0:
+            raise ValueError("Divisão por zero - pontos coincidentes")
+
+        wx = (lon_alvo - x1) / dx
+        wy = (y1 - lat_alvo) / dy
+
+        # Interpolação bilinear
+        R1 = Q11 * (1 - wx) + Q12 * wx  # Interpolação na linha superior
+        R2 = Q21 * (1 - wx) + Q22 * wx  # Interpolação na linha inferior
+        resultado = R1 * (1 - wy) + R2 * wy  # Interpolação entre as linhas
+
+        # Nova checagem: garantir que 'resultado' esteja entre min(v) e max(v)
+        min_v = v.min()
+        max_v = v.max()
+        if not (min_v <= resultado <= max_v):
+            raise ValueError(
+                f"Resultado interpolado ({resultado}) está fora do intervalo "
+                f"[{min_v}, {max_v}] dos valores dos quatro cantos"
+            )
+
+        return resultado
+
+    except Exception as e:
+        print(f"\nErro durante a interpolação: {e}")
+        raise ValueError(f"Falha na interpolação bilinear: {e}")
+
 
 
 # Função para processar o conteúdo do arquivo e salvar como ACE3
@@ -372,7 +443,7 @@ def processar_arquivo(
                 for col in colunas[2:]:
                     if col in valores_interpolados:
                         f.write(
-                            f" {valores_interpolados[col]:.{precisao.get(col, 6)}f}"
+                            f" {valores_interpolados[col]:.6f}"
                         )
                     else:
                         f.write("  NaN")

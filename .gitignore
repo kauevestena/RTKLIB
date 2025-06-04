@@ -193,3 +193,6 @@ scripts/stationwise_calls.json
 scripts/already_done_calls_broken.txt
 debug.txt
 debug.csv
+app_calls.txt
+scripts/already_done_calls_*.txt
+scripts/already_done_stations_*.txt

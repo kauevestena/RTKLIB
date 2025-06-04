@@ -5284,11 +5284,11 @@ def process(data_as_str, station, delaypath):
     mfw_grads = mfw * (gn_w * cos_az + ge_w * sin_az)
     mfh_grads = mfh * (gn_h * cos_az + ge_h * sin_az)
 
-    trop_corr_only_grad = mfh * zhd + mfw * zwd + mfh_grads + mfw_grads
+    trop_corr_only_grad = trop_corr = mfh * zhd + mfw * zwd + mfh_grads + mfw_grads
 
-    trop_corr, Gn_estimado, Ge_estimado = novo_modelo_troposferico_brasil(
-        el, az, zhd, zwd, ah, aw, bh, bw, ch, cw, mfh, mfw
-    )
+    # trop_corr, Gn_estimado, Ge_estimado = novo_modelo_troposferico_brasil(
+    #     el, az, zhd, zwd, ah, aw, bh, bw, ch, cw, mfh, mfw
+    # )
 
     # logging.info(f"trop_corr: {trop_corr}, {trop_corr_only_grad}")
 
@@ -5357,7 +5357,7 @@ def process(data_as_str, station, delaypath):
         # grad_e,grad_n,m_h,m_w_orig,m_w,zhd,zwd,x_0,x_1,x_2,tot_delay,epoch_s,mjd,az,el,zd,lat,lon,h_ell,ah,aw
 
         f.write(
-            f"{Ge_estimado:.6f},{Gn_estimado:.6f},{mfh:.6f},{mfw:.6f},{mfw_grads:.6f},{zhd:.6f},{zwd:.6f},0,0,0,{trop_corr:.6f},{time},{mjd},{az*RAD2DEG},{el*RAD2DEG},{zd*RAD2DEG},{ah},{aw},{trop_corr_only_grad:.6f}\n"
+            f"0,0,{mfh:.6f},{mfw:.6f},{mfw_grads:.6f},{zhd:.6f},{zwd:.6f},0,0,0,{trop_corr:.6f},{time},{mjd},{az*RAD2DEG},{el*RAD2DEG},{zd*RAD2DEG},{ah},{aw},{trop_corr_only_grad:.6f}\n"
         )
 
     return trop_corr
