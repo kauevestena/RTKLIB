@@ -27,6 +27,7 @@ logging.basicConfig(
 )
 
 
+
 # HOST = "127.0.0.1"
 # PORT = 5000
 
@@ -5286,6 +5287,8 @@ def process(data_as_str, station, delaypath):
 
     trop_corr_only_grad = trop_corr = mfh * zhd + mfw * zwd + mfh_grads + mfw_grads
 
+    # /* zhd,zwd,m_h_,m_w,gra_e,grad_n  */
+
     # trop_corr, Gn_estimado, Ge_estimado = novo_modelo_troposferico_brasil(
     #     el, az, zhd, zwd, ah, aw, bh, bw, ch, cw, mfh, mfw
     # )
@@ -5360,7 +5363,17 @@ def process(data_as_str, station, delaypath):
             f"0,0,{mfh:.6f},{mfw:.6f},{mfw_grads:.6f},{zhd:.6f},{zwd:.6f},0,0,0,{trop_corr:.6f},{time},{mjd},{az*RAD2DEG},{el*RAD2DEG},{zd*RAD2DEG},{ah},{aw},{trop_corr_only_grad:.6f}\n"
         )
 
-    return trop_corr
+    # return trop_corr
+
+    # /* zhd,zwd,m_h_,m_w,gra_e,grad_n  */
+
+    grad_e_uni = ge_h + ge_w
+    grad_n_uni = gn_h + gn_w
+
+
+
+    return f"{trop_corr:.8f},{zhd:.8f},{zwd:.8f},{mfh:.8f},{mfw:.8f},{grad_e_uni:.8f},{grad_n_uni:.8f}"
+
 
 
 # def handle_client(conn, addr):

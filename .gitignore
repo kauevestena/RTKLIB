@@ -196,3 +196,5 @@ debug.csv
 app_calls.txt
 scripts/already_done_calls_*.txt
 scripts/already_done_stations_*.txt
+response.txt
+response*.txt
