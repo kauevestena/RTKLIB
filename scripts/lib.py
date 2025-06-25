@@ -55,7 +55,7 @@ proc_sc_root = {
 exec_paths = {
     "mod": "/home/RTKLIB/app/rnx2rtkp/gcc/rnx2rtkp",
     "orig": "/home/RTKLIB/rtklib_orig/RTKLIB/app/rnx2rtkp/gcc/rnx2rtkp",
-    "demo5": "/home/RTKLIB/demo5/RTKLIB/app/consapp/rnx2rtkp/gcc/rnx2rtkp",
+    "demo5": "/home/RTKLIB/demo5_files/RTKLIB/app/consapp/rnx2rtkp/gcc/rnx2rtkp",
 }
 
 proc_sc_execs = {
