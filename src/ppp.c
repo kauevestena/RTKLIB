@@ -1010,15 +1010,19 @@ double mapping_function(double e, double a, double b, double c)
 #define HOST "127.0.0.1"  
 #define PORT 5000         
 #include <arpa/inet.h>
+#include <errno.h>  /* For errno and strerror */
+#include <string.h> /* For memset and strerror */
 
 double send_and_receive(const char *message) {
     int sock = 0;
     struct sockaddr_in serv_addr;
     char buffer[1024] = {0};
+    ssize_t send_status;
+    int valread;
 
     /* 1. Create a socket */
     if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
-        fprintf(stderr, "Socket creation error\n");
+        fprintf(stderr, "send_and_receive: Socket creation error: %s (errno: %d)\n", strerror(errno), errno);
         return -1.0; /* error indicator */
     }
 
@@ -1029,33 +1033,60 @@ double send_and_receive(const char *message) {
 
     /* 3. Convert address from text to binary form */
     if (inet_pton(AF_INET, HOST, &serv_addr.sin_addr) <= 0) {
-        fprintf(stderr, "Invalid address / Address not supported\n");
+        fprintf(stderr, "send_and_receive: Invalid address / Address not supported for %s. Error: %s (errno: %d)\n", HOST, strerror(errno), errno);
         close(sock);
         return -1.0;
     }
 
     /* 4. Connect to the server */
     if (connect(sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0) {
-        fprintf(stderr, "Connection Failed\n");
+        fprintf(stderr, "send_and_receive: Connection Failed to %s:%d. Error: %s (errno: %d)\n", HOST, PORT, strerror(errno), errno);
         close(sock);
         return -1.0;
     }
 
     /* 5. Send the message */
-    send(sock, message, strlen(message), 0);
+    fprintf(stderr, "send_and_receive: Sending message: \"%s\"\n", message);
+    send_status = send(sock, message, strlen(message), 0);
+    if (send_status < 0) {
+        fprintf(stderr, "send_and_receive: Send failed. Error: %s (errno: %d)\n", strerror(errno), errno);
+        close(sock);
+        return -1.0;
+    } else if ((size_t)send_status < strlen(message)) {
+        fprintf(stderr, "send_and_receive: Warning: Not all data sent. Sent %zd of %zu bytes.\n", send_status, strlen(message));
+        /* Depending on requirements, you might want to handle this as an error or try to send remaining data */
+    }
+
 
     /* 6. Receive the server's response */
-    int valread = read(sock, buffer, sizeof(buffer) - 1);
+    valread = read(sock, buffer, sizeof(buffer) - 1);
     if (valread > 0) {
         buffer[valread] = '\0';  /* null-terminate the received string */
-    } else {
-        fprintf(stderr, "No data received or error.\n");
+        fprintf(stderr, "send_and_receive: Received response: \"%s\"\n", buffer);
+    } else if (valread == 0) {
+        fprintf(stderr, "send_and_receive: No data received (connection closed by peer).\n");
+        close(sock);
+        return -1.0;
+    }
+    else {
+        fprintf(stderr, "send_and_receive: Read error. Error: %s (errno: %d)\n", strerror(errno), errno);
         close(sock);
         return -1.0;
     }
 
     /* 7. Convert the response string to a double */
-    double result = strtod(buffer, NULL);
+    char *endptr;
+    double result = strtod(buffer, &endptr);
+
+    if (buffer == endptr) {
+        fprintf(stderr, "send_and_receive: Error converting response \"%s\" to double. No digits were found.\n", buffer);
+        close(sock);
+        return -1.0;
+    } else if (*endptr != '\0' && *endptr != '\n' && *endptr != '\r') {
+        fprintf(stderr, "send_and_receive: Warning: Further characters found after number in response \"%s\": \"%s\". Parsed value: %f\n", buffer, endptr, result);
+        /* Depending on requirements, this might be an error or acceptable */
+    }
+
 
     /* 8. Close the socket */
     close(sock);
@@ -1097,8 +1128,22 @@ static double prectrop(gtime_t time, const double *pos, const double *azel,
 
     snprintf(command_vmf3,sizeof(command_vmf3),"%d,%lf,%lf,%lf",time.time,0.0,azel[0],azel[1]);
 
+    double result = send_and_receive(command_vmf3);
 
-    return send_and_receive(command_vmf3);
+    if (result == -1.0) { /* Check for error indicator from send_and_receive */
+        fprintf(stderr, "prectrop: Error in send_and_receive. Propagating error state.\n");
+        /* Optionally, set var to a high value to indicate high uncertainty or error */
+        if (var) *var = SQR(1000.0); /* Example: set variance to a very large number */
+        return -1.0; /* Or another specific error value if -1.0 could be a valid, though unlikely, tropo value */
+    }
+
+    /* If the VMF model is expected to return non-positive values under normal circumstances,
+     * the error check above might need adjustment. Assuming positive for typical tropo delays.
+     */
+    if (var) *var = SQR(opt->err[5]); /* Standard deviation of troposphere model error (if defined in opt) */
+                                     /* Or a default value if not specified, e.g., SQR(0.01) for 1cm error */
+
+    return result;
 
 }
 /* phase and code residuals --------------------------------------------------*/
